@@ -13,4 +13,7 @@ Once you have installed Shionn, you can use it like this:
 ```sh
 # extract resource files
 shionn -i example.pac
+
+# extract
+shionn example.arc
 ```

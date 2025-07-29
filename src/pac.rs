@@ -1,12 +1,14 @@
 #![allow(unnecessary_transmutes)]
 #![allow(unused_must_use)]
 
-use encoding_rs::SHIFT_JIS;
 use std::fs::{self, File};
 use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::mem;
 use std::path::Path;
 use std::slice;
+
+use encoding_rs::SHIFT_JIS;
+
 #[derive(Debug, Copy, Clone)]
 pub struct Info {
     pub name: [u8; 32],
@@ -96,7 +98,7 @@ pub fn extract(file: &Path, base: &Path) -> io::Result<()> {
     let info: Box<[Info]> =
         unsafe { Box::from_raw(slice::from_raw_parts_mut(info_ptr, count as usize)) };
 
-    fs::create_dir(base)?;
+    fs::create_dir_all(base)?;
     let max = info
         .iter()
         .map(|info| info.size)
@@ -106,7 +108,7 @@ pub fn extract(file: &Path, base: &Path) -> io::Result<()> {
 
     for info in info.iter() {
         let buffer_u8 = unsafe {
-            std::slice::from_raw_parts_mut((&mut *data).as_mut_ptr() as *mut u8, info.size as usize)
+            std::slice::from_raw_parts_mut((&mut data).as_mut_ptr() as *mut u8, info.size as usize)
         };
         file.read_exact(buffer_u8)?;
         if buffer_u8[0] == b'$' {
@@ -142,7 +144,7 @@ pub fn parse_data_to_json<W: Write>(input: &[u8], mut out: W) -> io::Result<()> 
 
     writeln!(out, "{{")?;
     writeln!(out, "  \"name\": \"{}\",", escape_json_string(&name))?;
-    writeln!(out, "  \"length\": {:},", length)?;
+    writeln!(out, "  \"length\": {length:},")?;
 
     for i in 0..length {
         debug_assert_eq!(&input[pos..pos + 4], &i.to_le_bytes());
@@ -157,10 +159,10 @@ pub fn parse_data_to_json<W: Write>(input: &[u8], mut out: W) -> io::Result<()> 
 
         let (cow, _, _) = SHIFT_JIS.decode(str_bytes);
 
-        let key = format!("0x{:08X}", i);
+        let key = format!("0x{i:08X}");
         let value = escape_json_string(&cow);
 
-        write!(out, "    \"{}\": \"{}\"", key, value);
+        write!(out, "    \"{key}\": \"{value}\"");
         if i + 1 != length {
             writeln!(out, ",");
         } else {
