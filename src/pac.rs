@@ -1,6 +1,3 @@
-#![allow(unnecessary_transmutes)]
-#![allow(unused_must_use)]
-
 use std::fs::{self, File};
 use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::mem;
@@ -13,7 +10,6 @@ use encoding_rs::SHIFT_JIS;
 pub struct Info {
     pub name: [u8; 32],
     pub size: u32,
-    #[allow(dead_code)]
     pub address: u32,
 }
 impl Info {
@@ -23,18 +19,16 @@ impl Info {
     }
 }
 
-#[allow(dead_code)]
 pub struct Text {
     name: [u8; 12],
     length: u32,
 }
 
 pub fn decode(buffer: &mut [u8]) {
-    let mut global_index = 0;
     let len = buffer.len();
 
-    for i in 0..len - len % 4 {
-        let processed = match global_index % 32 {
+    for (index, i) in (0..len - len % 4).enumerate() {
+        buffer[i] = match index % 32 {
             0 => {
                 buffer[i] ^= 0xd9;
                 (buffer[i] << 4) | (buffer[i] >> 4)
@@ -69,8 +63,6 @@ pub fn decode(buffer: &mut [u8]) {
             3 | 7 | 11 | 15 | 19 | 23 | 27 | 31 => buffer[i] ^ 0xF7,
             _ => buffer[i],
         };
-        buffer[i] = processed;
-        global_index += 1;
     }
 }
 
@@ -107,19 +99,19 @@ pub fn extract(file: &Path, base: &Path) -> io::Result<()> {
     let mut data: Box<[mem::MaybeUninit<u8>]> = Box::new_uninit_slice(max as usize);
 
     for info in info.iter() {
-        let buffer_u8 = unsafe {
+        let data = unsafe {
             std::slice::from_raw_parts_mut((data).as_mut_ptr() as *mut u8, info.size as usize)
         };
-        file.read_exact(buffer_u8)?;
-        if buffer_u8[0] == b'$' {
-            decode(&mut buffer_u8[16..]);
-            if buffer_u8[..12] == *b"$TEXT_LIST__" {
+        file.read_exact(data)?;
+        if data[0] == b'$' {
+            decode(&mut data[16..]);
+            if data[..12] == *b"$TEXT_LIST__" {
                 let mut json = File::create("$TEXT_LIST__.json")?;
-                parse_data_to_json(&buffer_u8, &mut json)?;
+                parse_data_to_json(data, &mut json)?;
             }
         }
         let mut output_file = File::create(base.join(info.name()))?;
-        output_file.write_all(buffer_u8)?;
+        output_file.write_all(data)?;
     }
     // let mut data = [0u8; 8];
     // file.read_exact(&mut data)?;

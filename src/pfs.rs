@@ -1,4 +1,4 @@
-use sha1::{Digest, Sha1, digest::typenum::Length};
+use sha1::{Digest, Sha1};
 use std::alloc::{self, Layout, alloc, dealloc};
 use std::fs::{self, File};
 use std::io::{self, Read, Seek, SeekFrom, Write};

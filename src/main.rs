@@ -1,9 +1,17 @@
+#![allow(unnecessary_transmutes)]
+#![allow(unused_must_use)]
+#![allow(dead_code)]
+#![allow(clippy::write_with_newline)]
+#![allow(clippy::manual_rotate)]
+#![allow(clippy::needless_range_loop)]
+
 use std::path::{Path, PathBuf};
 
 use clap::{CommandFactory, Parser};
-use regex;
+use regex::Regex;
 
 mod arc;
+mod bgi_arc;
 mod pac;
 mod pfs;
 
@@ -15,10 +23,6 @@ struct Shionn {
     input: Option<PathBuf>,
 
     file: Option<PathBuf>,
-
-    /// Turn debugging information on
-    #[arg(short, long, action = clap::ArgAction::Count)]
-    debug: u8,
 }
 
 fn main() {
@@ -26,32 +30,29 @@ fn main() {
 
     if let Some(path) = shionn.input.or(shionn.file).as_deref() {
         let name = path.file_name().unwrap_or_default();
-
         if let Some(file_str) = name.to_str() {
-            let re = regex::Regex::new(r"^.*\.pfs(\..*)?$").unwrap();
-            if let Some(_caps) = re.captures(file_str) {
-                let _ = pfs::extract(path, Path::new("shionn"));
+            let re = Regex::new(r"^.+\.(?P<ext>[^.\d]+)(?:\.\d+)*$").unwrap();
+            if let Some(caps) = re.captures(file_str) {
+                match &caps["ext"] {
+                    "pfs" => {
+                        pfs::extract(path, Path::new("shionn"));
+                    }
+                    "pac" => {
+                        pac::extract(path, Path::new("shionn"));
+                    }
+                    "arc" => {
+                        arc::extract(path, Path::new("shionn"));
+                    }
+                    _ => {
+                        println!("Are you sure this file is supported?(•_•)");
+                    }
+                }
             } else {
                 println!("(•_•)");
             }
-        }
-        if let Some(ext) = path.extension() {
-            if ext == "pac" {
-                let _ = pac::extract(path, Path::new("shionn"));
-            } else if ext == "arc" {
-                let _ = arc::extract(path, Path::new("shionn"));
-            } else {
-                println!("(•_•)");
-            }
-        } else {
-            println!("(•_•)");
         }
     } else {
         Shionn::command().print_help().unwrap();
         std::process::exit(0);
-    }
-
-    match shionn.debug {
-        _ => {}
     }
 }
