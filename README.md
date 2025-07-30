@@ -16,4 +16,7 @@ shionn -i example.pac
 
 # extract
 shionn example.arc
+
+# extract
+shionn example.pfs.1116
 ```

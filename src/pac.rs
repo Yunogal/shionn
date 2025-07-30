@@ -114,7 +114,7 @@ pub fn extract(file: &Path, base: &Path) -> io::Result<()> {
         if buffer_u8[0] == b'$' {
             decode(&mut buffer_u8[16..]);
             // if buffer_u8[..12] == *b"$TEXT_LIST__" {
-            //     let mut json = File::create("text.json")?;
+            //     let mut json = File::create("$TEXT_LIST__.json")?;
             //     parse_data_to_json(&buffer_u8, &mut json)?;
             // }
         }
@@ -139,18 +139,17 @@ pub fn parse_data_to_json<W: Write>(input: &[u8], mut out: W) -> io::Result<()> 
     }
     let name = String::from_utf8_lossy(&input[..12]);
     let length = u32::from_le_bytes(input[12..16].try_into().unwrap());
-
     let mut pos = 16;
 
-    writeln!(out, "{{")?;
-    writeln!(out, "  \"name\": \"{}\",", escape_json_string(&name))?;
-    writeln!(out, "  \"length\": {length:},")?;
+    write!(out, "{{\n")?;
+    write!(out, "  \"name\": \"{name}\",\n")?;
+    write!(out, "  \"length\": {length:}")?;
 
     for i in 0..length {
-        debug_assert_eq!(&input[pos..pos + 4], &i.to_le_bytes());
+        debug_assert_eq!(&input[pos..pos + 4], i.to_le_bytes());
         pos += 4;
         let start = pos;
-        while pos < input.len() && input[pos] != 0 {
+        while input[pos] != 0 {
             pos += 1;
         }
 
@@ -158,26 +157,8 @@ pub fn parse_data_to_json<W: Write>(input: &[u8], mut out: W) -> io::Result<()> 
         pos += 1;
 
         let (cow, _, _) = SHIFT_JIS.decode(str_bytes);
-
-        let key = format!("0x{i:08X}");
-        let value = escape_json_string(&cow);
-
-        write!(out, "    \"{key}\": \"{value}\"");
-        if i + 1 != length {
-            writeln!(out, ",");
-        } else {
-            writeln!(out);
-        }
+        write!(out, ",\n  \"0x{i:08X}\": \"{cow}\"")?;
     }
-
-    writeln!(out, "}}");
+    write!(out, "\n}}")?;
     Ok(())
-}
-
-fn escape_json_string(s: &str) -> String {
-    s.replace('\\', "\\\\")
-        .replace('"', "\\\"")
-        .replace('\n', "\\n")
-        .replace('\r', "\\r")
-        .replace('\t', "\\t")
 }

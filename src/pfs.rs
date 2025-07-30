@@ -75,7 +75,3 @@ pub fn extract(file: &Path, base: &Path) -> io::Result<()> {
     }
     Ok(())
 }
-
-fn main() {
-    let _ = extract(Path::new("sakuranotoki.pfs.010"), Path::new("shionn"));
-}
