@@ -108,15 +108,15 @@ pub fn extract(file: &Path, base: &Path) -> io::Result<()> {
 
     for info in info.iter() {
         let buffer_u8 = unsafe {
-            std::slice::from_raw_parts_mut((&mut data).as_mut_ptr() as *mut u8, info.size as usize)
+            std::slice::from_raw_parts_mut((data).as_mut_ptr() as *mut u8, info.size as usize)
         };
         file.read_exact(buffer_u8)?;
         if buffer_u8[0] == b'$' {
             decode(&mut buffer_u8[16..]);
-            // if buffer_u8[..12] == *b"$TEXT_LIST__" {
-            //     let mut json = File::create("$TEXT_LIST__.json")?;
-            //     parse_data_to_json(&buffer_u8, &mut json)?;
-            // }
+            if buffer_u8[..12] == *b"$TEXT_LIST__" {
+                let mut json = File::create("$TEXT_LIST__.json")?;
+                parse_data_to_json(&buffer_u8, &mut json)?;
+            }
         }
         let mut output_file = File::create(base.join(info.name()))?;
         output_file.write_all(buffer_u8)?;
