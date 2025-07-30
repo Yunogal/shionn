@@ -11,7 +11,6 @@ use clap::{CommandFactory, Parser};
 use regex::Regex;
 
 mod arc;
-mod bgi_arc;
 mod pac;
 mod pfs;
 
