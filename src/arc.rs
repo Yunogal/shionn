@@ -1,5 +1,7 @@
+use core::mem::transmute;
+use std::alloc::{self, Layout, alloc, dealloc};
 use std::fs::{self, File};
-use std::io::{self, Read, Write};
+use std::io::{self, Read, Seek, Write};
 use std::mem;
 use std::path::Path;
 use std::ptr;
@@ -7,9 +9,87 @@ use std::slice;
 
 #[derive(Debug, Clone)]
 pub struct Info {
+    length: u32,
+    size: u32,
+    point: *const u8,
+}
+#[derive(Debug, Clone)]
+pub struct Entry {
     pub size: u32,
     pub address: u32,
-    pub name: Box<str>,
+    pub str_data: Box<str>,
+}
+impl Info {
+    pub fn new(point: *const u8, length: u32, size: u32) -> Self {
+        Self {
+            point,
+            length,
+            size,
+        }
+    }
+    pub fn parse(&self) -> (u32, Box<[Entry]>) {
+        let mut pos = 0usize;
+        let buf = unsafe { slice::from_raw_parts(self.point, self.size as usize) };
+
+        let mut entries_uninit: Box<[mem::MaybeUninit<Entry>]> = {
+            let layout =
+                alloc::Layout::array::<mem::MaybeUninit<Entry>>(self.length as usize).unwrap();
+            let ptr = unsafe { alloc::alloc(layout) as *mut mem::MaybeUninit<Entry> };
+            if ptr.is_null() {
+                alloc::handle_alloc_error(layout);
+            }
+            unsafe { Box::from_raw(ptr::slice_from_raw_parts_mut(ptr, self.length as usize)) }
+        };
+        let mut max: u32 = 0;
+
+        let mut tmp = [0u8; 8];
+
+        for i in 0..self.length as usize {
+            tmp.copy_from_slice(&buf[pos..pos + 8]);
+            let (size, address) = unsafe { transmute(tmp) };
+            pos += 8;
+            if max < size {
+                max = size;
+            }
+            let start = pos;
+            loop {
+                debug_assert!(pos <= self.size as usize);
+                if buf[pos..pos + 2] == [0x0, 0x0] {
+                    pos += 2;
+                    break;
+                }
+                pos += 2;
+            }
+            let str_bytes = &buf[start..pos - 2];
+
+            let u16_slice = unsafe {
+                let ptr = str_bytes.as_ptr().cast::<u16>();
+                slice::from_raw_parts(ptr, str_bytes.len() / 2)
+            };
+            let string = char::decode_utf16(u16_slice.iter().copied())
+                .collect::<Result<String, _>>()
+                .map_err(|e| e.to_string())
+                .unwrap();
+
+            entries_uninit[i] = mem::MaybeUninit::new(Entry {
+                str_data: string.into_boxed_str(),
+                address,
+                size,
+            });
+        }
+        let entries = unsafe {
+            mem::transmute::<Box<[mem::MaybeUninit<Entry>]>, Box<[Entry]>>(entries_uninit)
+        };
+
+        (max, entries)
+    }
+
+    pub fn free(&self) {
+        let layout = Layout::array::<u8>(self.size as usize).unwrap();
+        unsafe {
+            dealloc(self.point as *mut u8, layout);
+        }
+    }
 }
 
 pub fn extract(file: &Path, base: &Path) -> io::Result<()> {
@@ -17,52 +97,43 @@ pub fn extract(file: &Path, base: &Path) -> io::Result<()> {
     let mut buffer = [0u8; 8];
     file.read_exact(&mut buffer)?;
     let (length, size): (u32, u32) = unsafe { mem::transmute(buffer) };
-    let mut buffers: Box<[mem::MaybeUninit<u8>]> = Box::new_uninit_slice(size as usize);
-    let raw_bytes =
-        unsafe { slice::from_raw_parts_mut(buffers.as_mut_ptr() as *mut u8, size as usize) };
-    file.read_exact(raw_bytes)?;
-    let initialized_buffers: Box<[u8]> = unsafe { buffers.assume_init() };
 
-    let mut str = [0u8; 50];
+    let layout = Layout::array::<u8>(size as usize).unwrap();
+    let ptr = unsafe { alloc(layout) };
+    let buf = unsafe { slice::from_raw_parts_mut(ptr, size as usize) };
+    file.read_exact(buf)?;
+    let info = Info::new(ptr, length, size);
+
+    let (max, entry) = info.parse();
+    let mut buffer: Box<[mem::MaybeUninit<u8>]> = Box::new_uninit_slice(max as usize);
+    let mut file_path;
+    #[cfg(debug_assertions)]
+    let mut pos = 8 + size as u64;
     fs::create_dir_all(base)?;
-    let mut ptr = initialized_buffers.as_ptr() as *mut u8;
-    for _i in 0..length {
-        let bytes: [u8; 8] = unsafe { ptr::read_unaligned(ptr as *const [u8; 8]) };
-        let (size, _address): (u32, u32) = unsafe { mem::transmute(bytes) };
-        ptr = unsafe { ptr.add(8) };
-        for i in 0..50 {
-            let two_bytes: [u8; 2] = unsafe { ptr::read_unaligned(ptr as *const [u8; 2]) };
-            ptr = unsafe { ptr.add(2) };
+    for i in 0..length as usize {
+        debug_assert_eq!(pos, file.stream_position()?);
 
-            if two_bytes == [0, 0] {
-                str[0] = i as u8;
-                break;
-            }
-            str[i + 1] = two_bytes[0];
-        }
-        let end = str[0] as usize;
-        let slice = &str[1..=end];
+        let size = entry[i].size;
         #[cfg(debug_assertions)]
-        let str = std::str::from_utf8(slice).unwrap();
-        #[cfg(not(debug_assertions))]
-        let str = unsafe { std::str::from_utf8_unchecked(slice) };
-
-        let mut buffers: Box<[mem::MaybeUninit<u8>]> = Box::new_uninit_slice(size as usize);
-        let raw_bytes =
-            unsafe { slice::from_raw_parts_mut(buffers.as_mut_ptr() as *mut u8, size as usize) };
-        file.read_exact(raw_bytes)?;
-        let mut data: Box<[u8]> = unsafe { buffers.assume_init() };
-
-        //decode func
-        if &str[str.len() - 4..] == ".ws2" {
-            for byte in data.iter_mut() {
+        {
+            pos += size as u64;
+        }
+        let name = &entry[i].str_data;
+        let pointer =
+            unsafe { slice::from_raw_parts_mut(buffer.as_mut_ptr() as *mut u8, size as usize) };
+        file.read_exact(pointer)?;
+        let initialized_slice: &mut [u8] =
+            unsafe { slice::from_raw_parts_mut(buffer.as_mut_ptr() as *mut u8, size as usize) };
+        if name[name.len() - 4..] == *".ws2" {
+            for byte in initialized_slice.iter_mut() {
                 *byte = (*byte >> 2) | (*byte << 6);
             }
         }
 
-        let mut output_file = File::create(base.join(str))?;
-        output_file.write_all(&data)?;
+        file_path = base.join(name.as_ref());
+        let mut output_file = File::create(file_path)?;
+        output_file.write_all(pointer)?;
     }
-
+    info.free();
     Ok(())
 }

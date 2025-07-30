@@ -8,3 +8,10 @@ clap = { version = "4.5.41", features = ["derive"] }
 encoding_rs = "0.8.35"
 regex = "1.11.1"
 sha1 = "0.10.6"
+
+[profile.release]
+strip = true
+opt-level = "z" # s or z
+lto = true
+codegen-units = 1
+panic = "abort"
