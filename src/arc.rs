@@ -111,6 +111,7 @@ pub fn extract(file: &Path, base: &Path) -> io::Result<()> {
     let mut pos = 8 + size as u64;
     fs::create_dir_all(base)?;
     for i in 0..length as usize {
+        #[cfg(debug_assertions)]
         debug_assert_eq!(pos, file.stream_position()?);
 
         let size = entry[i].size;
