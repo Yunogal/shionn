@@ -1,7 +1,26 @@
 [package]
 name = "shionn"
 version = "0.4.0"
+authors=["Yuno","tsubakii"]
 edition = "2024"
+# rust-version=1.88
+description="a rust program"
+documentation="docs/"
+readme="README.md"
+# homepage=""
+# repository=""
+# license="AGPL"
+license-file="LICENSE"
+keywords=["galgame","acg","vi","rust"]
+categories=["cli"]
+# workspace
+# build
+# link
+# include
+# exclude
+# publish
+# metadata
+# default-run="cargo run"
 
 [dependencies]
 clap = { version = "4.5.41", features = ["derive"] }

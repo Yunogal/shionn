@@ -2,7 +2,7 @@ use sha1::{Digest, Sha1};
 use std::alloc::{self, Layout, alloc, dealloc};
 use std::fs::{self, File};
 use std::io::{self, Read, Seek, SeekFrom, Write};
-use std::mem;
+use std::mem::{MaybeUninit, transmute};
 use std::path::Path;
 use std::ptr;
 use std::slice;
@@ -34,12 +34,11 @@ impl Info {
         let size = u32::from_le_bytes(buf[pos..pos + 4].try_into().unwrap());
         pos += 4;
 
-        let mut entries_uninit: Box<[mem::MaybeUninit<Entry>]> = {
-            let layout =
-                std::alloc::Layout::array::<mem::MaybeUninit<Entry>>(size as usize).unwrap();
-            let ptr = unsafe { alloc::alloc(layout) as *mut mem::MaybeUninit<Entry> };
+        let mut entries_uninit: Box<[MaybeUninit<Entry>]> = {
+            let layout = alloc::Layout::array::<MaybeUninit<Entry>>(size as usize).unwrap();
+            let ptr = unsafe { alloc::alloc(layout) as *mut MaybeUninit<Entry> };
             if ptr.is_null() {
-                std::alloc::handle_alloc_error(layout);
+                alloc::handle_alloc_error(layout);
             }
             unsafe { Box::from_raw(ptr::slice_from_raw_parts_mut(ptr, size as usize)) }
         };
@@ -52,9 +51,9 @@ impl Info {
             pos += str_length;
 
             #[cfg(debug_assertions)]
-            let str_data = std::str::from_utf8(str_bytes).unwrap();
+            let str_data = str::from_utf8(str_bytes).unwrap();
             #[cfg(not(debug_assertions))]
-            let str_data = unsafe { std::str::from_utf8_unchecked(str_bytes) };
+            let str_data = unsafe { str::from_utf8_unchecked(str_bytes) };
             pos += 4;
 
             let address = u32::from_le_bytes(buf[pos..pos + 4].try_into().unwrap());
@@ -66,15 +65,14 @@ impl Info {
                 max = offset
             }
 
-            entries_uninit[i] = mem::MaybeUninit::new(Entry {
+            entries_uninit[i] = MaybeUninit::new(Entry {
                 str_data,
                 address,
                 offset,
             });
         }
-        let entries = unsafe {
-            mem::transmute::<Box<[mem::MaybeUninit<Entry>]>, Box<[Entry]>>(entries_uninit)
-        };
+        let entries =
+            unsafe { transmute::<Box<[MaybeUninit<Entry>]>, Box<[Entry]>>(entries_uninit) };
         (max, size, entries)
     }
 
@@ -99,12 +97,12 @@ pub fn extract(file: &Path, base: &Path) -> io::Result<()> {
     let mut file = File::open(file)?;
     let mut buffer = [0u8; 7];
     file.read_exact(&mut buffer)?;
-    let (signature, size): ([u8; 3], [u8; 4]) = unsafe { mem::transmute(buffer) };
+    let (signature, size): ([u8; 3], [u8; 4]) = unsafe { transmute(buffer) };
 
     if signature != *b"pf8" {
         return Ok(());
     }
-    let length: u32 = unsafe { mem::transmute(size) };
+    let length: u32 = unsafe { transmute(size) };
     let layout = Layout::array::<u8>(length as usize).unwrap();
 
     let ptr = unsafe { alloc(layout) };
@@ -113,9 +111,10 @@ pub fn extract(file: &Path, base: &Path) -> io::Result<()> {
     let info = Info::new(ptr, length as u32);
     let (max, length, entry) = info.parse();
     let mut current = entry[0].address;
+    #[cfg(debug_assertions)]
     debug_assert_eq!(current as u64, file.stream_position()?);
 
-    let mut file_buffer: Box<[mem::MaybeUninit<u8>]> = Box::new_uninit_slice(max as usize);
+    let mut file_buffer: Box<[MaybeUninit<u8>]> = Box::new_uninit_slice(max as usize);
     let key = info.sha1();
     let mut file_path;
     for i in 0..length as usize {

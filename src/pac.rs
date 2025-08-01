@@ -1,6 +1,6 @@
-use std::fs::{self, File};
+use std::fs::File;
 use std::io::{self, Read, Seek, SeekFrom, Write};
-use std::mem;
+use std::mem::{MaybeUninit, transmute};
 use std::path::Path;
 use std::slice;
 
@@ -15,7 +15,7 @@ pub struct Info {
 impl Info {
     pub fn name(&self) -> &str {
         let len = self.name.iter().position(|&c| c == 0).unwrap_or(32);
-        std::str::from_utf8(&self.name[..len]).unwrap_or("")
+        str::from_utf8(&self.name[..len]).unwrap_or("")
     }
 }
 
@@ -77,11 +77,11 @@ pub fn extract(file: &Path, base: &Path) -> io::Result<()> {
 
     let mut count = [0u8; 4];
     file.read_exact(&mut count)?;
-    let count: u32 = unsafe { mem::transmute(count) };
+    let count: u32 = unsafe { transmute(count) };
 
     file.seek(SeekFrom::Start(0x804))?;
 
-    let mut buffer: Box<[mem::MaybeUninit<u8>]> = Box::new_uninit_slice(40 * count as usize);
+    let mut buffer: Box<[MaybeUninit<u8>]> = Box::new_uninit_slice(40 * count as usize);
     let raw_bytes =
         unsafe { slice::from_raw_parts_mut(buffer.as_mut_ptr() as *mut u8, 40 * count as usize) };
 
@@ -89,19 +89,16 @@ pub fn extract(file: &Path, base: &Path) -> io::Result<()> {
     let info_ptr = Box::into_raw(buffer) as *mut Info;
     let info: Box<[Info]> =
         unsafe { Box::from_raw(slice::from_raw_parts_mut(info_ptr, count as usize)) };
-
-    fs::create_dir_all(base)?;
     let max = info
         .iter()
         .map(|info| info.size)
         .max()
         .unwrap_or(4 * 1024 * 1024);
-    let mut data: Box<[mem::MaybeUninit<u8>]> = Box::new_uninit_slice(max as usize);
+    let mut data: Box<[MaybeUninit<u8>]> = Box::new_uninit_slice(max as usize);
 
     for info in info.iter() {
-        let data = unsafe {
-            std::slice::from_raw_parts_mut((data).as_mut_ptr() as *mut u8, info.size as usize)
-        };
+        let data =
+            unsafe { slice::from_raw_parts_mut(data.as_mut_ptr() as *mut u8, info.size as usize) };
         file.read_exact(data)?;
         if data[0] == b'$' {
             decode(&mut data[16..]);
@@ -138,6 +135,7 @@ pub fn parse_data_to_json<W: Write>(input: &[u8], mut out: W) -> io::Result<()> 
     write!(out, "  \"length\": {length:}")?;
 
     for i in 0..length {
+        #[cfg(debug_assertions)]
         debug_assert_eq!(&input[pos..pos + 4], i.to_le_bytes());
         pos += 4;
         let start = pos;
@@ -153,4 +151,14 @@ pub fn parse_data_to_json<W: Write>(input: &[u8], mut out: W) -> io::Result<()> 
     }
     write!(out, "\n}}")?;
     Ok(())
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::mem::size_of;
+    #[test]
+    fn size() {
+        assert_eq!(size_of::<Info>(), 40);
+    }
 }
