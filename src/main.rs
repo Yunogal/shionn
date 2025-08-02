@@ -13,6 +13,7 @@ use regex::Regex;
 
 mod arc;
 mod arc_bgi;
+mod exe;
 mod pac;
 mod pfs;
 mod pna;
@@ -31,8 +32,11 @@ struct Shionn {
     #[arg(short, long, value_name = "true/false", default_value = "true")]
     sub_extract: Option<bool>,
 
-    #[arg(short, long, value_name = "directory", default_value = "shionn")]
+    #[arg(short, long, value_name = "directory", default_value = ".shionn")]
     output: Option<PathBuf>,
+
+    #[arg(short, long, value_name = "file")]
+    extra: Option<PathBuf>,
 }
 
 fn main() {
@@ -41,11 +45,18 @@ fn main() {
     if let Some(path) = shionn.input.or(shionn.file).as_deref() {
         let name = path.file_name().unwrap_or_default();
         if let Some(file_str) = name.to_str() {
-            let re = Regex::new(r"^.+\.(?P<ext>[^.\d]+)(?:\.\d+)*$").unwrap();
+            let re = Regex::new(r"^.+\.(?P<ext>[^.]+)(?:\.\d+)*$").unwrap();
             if let Some(caps) = re.captures(file_str) {
-                let output = shionn.output.unwrap_or(PathBuf::from("shionn"));
+                let output = shionn.output.unwrap_or(PathBuf::from(".shionn"));
                 fs::create_dir_all(&output);
                 match &caps["ext"] {
+                    | "ws2" => {
+                        if shionn.extra.is_none() {
+                            println!("Requires additional parameters (such as *.exe)");
+                        } else {
+                            exe::check(&shionn.extra.unwrap(), path);
+                        }
+                    },
                     | "pfs" => {
                         pfs::extract(path, &output);
                     },

@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{self, Read, Seek, SeekFrom, Write};
+use std::io::{self, BufWriter, Read, Seek, SeekFrom, Write};
 use std::mem::{MaybeUninit, transmute};
 use std::path::Path;
 use std::slice;
@@ -103,8 +103,9 @@ pub fn extract(file: &Path, base: &Path) -> io::Result<()> {
         if data[0] == b'$' {
             decode(&mut data[16..]);
             if data[..12] == *b"$TEXT_LIST__" {
-                let mut json = File::create("$TEXT_LIST__.json")?;
-                parse_data_to_json(data, &mut json)?;
+                let json = File::create("$TEXT_LIST__.json")?;
+                let mut writer = BufWriter::new(json);
+                parse_data_to_json(data, &mut writer)?;
             }
         }
         let mut output_file = File::create(base.join(info.name()))?;
@@ -146,10 +147,11 @@ pub fn parse_data_to_json<W: Write>(input: &[u8], mut out: W) -> io::Result<()> 
         let str_bytes = &input[start..pos];
         pos += 1;
 
-        let (cow, _, _) = SHIFT_JIS.decode(str_bytes);
+        let (cow, ..) = SHIFT_JIS.decode(str_bytes);
         write!(out, ",\n  \"0x{i:08X}\": \"{cow}\"")?;
     }
     write!(out, "\n}}")?;
+    out.flush()?;
     Ok(())
 }
 

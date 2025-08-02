@@ -19,4 +19,7 @@ shionn example.arc
 
 # extract
 shionn example.pfs.1116
+
+#
+shionn *.ws2 -e *.exe
 ```
