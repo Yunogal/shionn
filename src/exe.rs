@@ -232,7 +232,7 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
         return Err(Error::new(
             ErrorKind::InvalidData,
             format!(
-                "Invalid DOS header: expected e_magic == 0x5A4D ('MZ'), got 0x{:04X}",
+                "Invalid DOS header: expected e_magic == 0x5A4D ('MZ'), got 0X{:04X}",
                 dos_header.e_magic
             ),
         ));
@@ -250,7 +250,7 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
         return Err(Error::new(
             ErrorKind::InvalidData,
             format!(
-                "Invalid PE header: expected signature 0x00004550 ('PE\0\0'), got 0x{:08X}",
+                "Invalid PE header: expected signature 0x00004550 ('PE\0\0'), got 0X{:08X}",
                 signature
             ),
         ));
@@ -304,7 +304,7 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
         return Err(io::Error::new(
             ErrorKind::InvalidData,
             format!(
-                "Invalid SizeOfOptionalHeader: expected 224 (0xE0) for PE32, got (0x{:04X})",
+                "Invalid SizeOfOptionalHeader: expected 224 (0xE0) for PE32, got (0X{:04X})",
                 size_of_optional_header
             ),
         ));
@@ -315,7 +315,7 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
         return Err(Error::new(
             ErrorKind::InvalidData,
             format!(
-                "Unsupported Optional Header Magic: expected 0x10B (PE32), got 0x{:X}",
+                "Unsupported Optional Header Magic: expected 0x10B (PE32), got 0X{:X}",
                 magic
             ),
         ));
@@ -457,17 +457,10 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
 
         let mut arg_index = instruction_slice[code as usize] as usize;
         if arg_index == 0 {
-            break;
+            index += 1;
+            continue;
         }
         write!(writer, "  \"instruction#{:02X}\": [\n", code)?;
-
-        let mut test = arg_index;
-        loop {
-            if arg_slice[test] == 0xFF {
-                break;
-            }
-            test += 1;
-        }
         index += 1;
         loop {
             match arg_slice[arg_index] {
@@ -475,7 +468,7 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
                     //u8
                     write!(
                         writer,
-                        "    [\"0x00\",\"{:0X}\"],\n",
+                        "    [\"0x00\",\"{:02X}\"],\n",
                         initialized_slice[index]
                     )?;
                     arg_index += 1;
@@ -486,7 +479,7 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
                     let bytes: [u8; 2] = initialized_slice[index..index + 2].try_into().unwrap();
                     write!(
                         writer,
-                        "    [\"0x01\",\"{:0X}\"],\n",
+                        "    [\"0x01\",\"{:04X}\"],\n",
                         i16::from_le_bytes(bytes)
                     )?;
                     arg_index += 1;
@@ -497,7 +490,7 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
                     let bytes: [u8; 2] = initialized_slice[index..index + 2].try_into().unwrap();
                     write!(
                         writer,
-                        "    [\"0x02\",\"{:0X}\"],\n",
+                        "    [\"0x02\",\"{:04X}\"],\n",
                         u16::from_le_bytes(bytes)
                     )?;
                     arg_index += 1;
@@ -508,7 +501,7 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
                     let bytes: [u8; 4] = initialized_slice[index..index + 4].try_into().unwrap();
                     write!(
                         writer,
-                        "    [\"0x03\",\"{:0X}\"],\n",
+                        "    [\"0x03\",\"{:08X}\"],\n",
                         i32::from_le_bytes(bytes)
                     )?;
                     arg_index += 1;
@@ -519,7 +512,7 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
                     let bytes: [u8; 4] = initialized_slice[index..index + 4].try_into().unwrap();
                     write!(
                         writer,
-                        "    [\"0x04\",\"{:0X}\"],\n",
+                        "    [\"0x04\",\"{:08X}\"],\n",
                         u32::from_le_bytes(bytes)
                     )?;
                     arg_index += 1;
@@ -530,7 +523,7 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
                     let bytes: [u8; 4] = initialized_slice[index..index + 4].try_into().unwrap();
                     write!(
                         writer,
-                        "    [\"0x05\",\"{}\"],\n",
+                        "    [\"0x05\",\"{:08X}\"],\n",
                         u32::from_le_bytes(bytes)
                     )?;
                     arg_index += 1;
@@ -545,7 +538,11 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
                         index += 1;
                     }
                     let (data, ..) = SHIFT_JIS.decode(&initialized_slice[start..index]);
-                    write!(writer, "    [\"0x{}\",\"{data}\"],\n", arg_slice[arg_index])?;
+                    write!(
+                        writer,
+                        "    [\"0X{:02X}\",\"{data}\"],\n",
+                        arg_slice[arg_index]
+                    )?;
                     arg_index += 1;
                 },
                 | 0x07 => {
@@ -557,7 +554,7 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
                             | 0x00 => {
                                 write!(
                                     writer,
-                                    "    [\"0x00\",\"{:0X}\"],\n",
+                                    "    [\"0x00\",\"{:02X}\"],\n",
                                     initialized_slice[index]
                                 )?;
                                 index += 1;
@@ -567,7 +564,7 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
                                     initialized_slice[index..index + 2].try_into().unwrap();
                                 write!(
                                     writer,
-                                    "    [\"0x02\",\"{:0X}\"],\n",
+                                    "    [\"0x01\",\"{:04X}\"],\n",
                                     i16::from_le_bytes(bytes)
                                 )?;
                                 index += 2;
@@ -577,7 +574,7 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
                                     initialized_slice[index..index + 2].try_into().unwrap();
                                 write!(
                                     writer,
-                                    "    [\"0x02\",\"{:0X}\"],\n",
+                                    "    [\"0x02\",\"{:04X}\"],\n",
                                     u16::from_le_bytes(bytes)
                                 )?;
                                 index += 2;
@@ -587,7 +584,7 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
                                     initialized_slice[index..index + 4].try_into().unwrap();
                                 write!(
                                     writer,
-                                    "    [\"0x03\",\"{:0X}\"],\n",
+                                    "    [\"0x03\",\"{:08X}\"],\n",
                                     i32::from_le_bytes(bytes)
                                 )?;
                                 index += 4;
@@ -597,7 +594,7 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
                                     initialized_slice[index..index + 4].try_into().unwrap();
                                 write!(
                                     writer,
-                                    "    [\"0x03\",\"{:0X}\"],\n",
+                                    "    [\"0x03\",\"{:08X}\"],\n",
                                     u32::from_le_bytes(bytes)
                                 )?;
                                 index += 4;
@@ -607,7 +604,7 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
                                     initialized_slice[index..index + 4].try_into().unwrap();
                                 write!(
                                     writer,
-                                    "    [\"0x03\",\"{}\"],\n",
+                                    "    [\"0x03\",\"{:08X}\"],\n",
                                     u32::from_le_bytes(bytes)
                                 )?;
                                 index += 4;
@@ -623,7 +620,7 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
                                 let (data, ..) = SHIFT_JIS.decode(&initialized_slice[start..index]);
                                 write!(
                                     writer,
-                                    "    [\"0x{}\",\"{data}\"],\n",
+                                    "    [\"0X{:02X}\",\"{data}\"],\n",
                                     arg_slice[arg_index]
                                 )?;
                             },
