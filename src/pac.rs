@@ -29,39 +29,39 @@ pub fn decode(buffer: &mut [u8]) {
 
     for (index, i) in (0..len - len % 4).enumerate() {
         buffer[i] = match index % 32 {
-            0 => {
+            | 0 => {
                 buffer[i] ^= 0xd9;
                 (buffer[i] << 4) | (buffer[i] >> 4)
-            }
-            4 => {
+            },
+            | 4 => {
                 buffer[i] ^= 0xEC;
                 (buffer[i] << 5) | (buffer[i] >> 3)
-            }
-            8 => {
+            },
+            | 8 => {
                 buffer[i] ^= 0x76;
                 (buffer[i] << 6) | (buffer[i] >> 2)
-            }
-            12 => {
+            },
+            | 12 => {
                 buffer[i] ^= 0x3B;
                 (buffer[i] << 7) | (buffer[i] >> 1)
-            }
-            16 => buffer[i] ^ 0x9d,
-            20 => {
+            },
+            | 16 => buffer[i] ^ 0x9d,
+            | 20 => {
                 buffer[i] ^= 0xCE;
                 (buffer[i] << 1) | (buffer[i] >> 7)
-            }
-            24 => {
+            },
+            | 24 => {
                 buffer[i] ^= 0x67;
                 (buffer[i] << 2) | (buffer[i] >> 6)
-            }
-            28 => {
+            },
+            | 28 => {
                 buffer[i] ^= 0xB3;
                 (buffer[i] << 3) | (buffer[i] >> 5)
-            }
-            1 | 5 | 9 | 13 | 17 | 21 | 25 | 29 => buffer[i] ^ 0x85,
-            2 | 6 | 10 | 14 | 18 | 22 | 26 | 30 => buffer[i] ^ 0xD5,
-            3 | 7 | 11 | 15 | 19 | 23 | 27 | 31 => buffer[i] ^ 0xF7,
-            _ => buffer[i],
+            },
+            | 1 | 5 | 9 | 13 | 17 | 21 | 25 | 29 => buffer[i] ^ 0x85,
+            | 2 | 6 | 10 | 14 | 18 | 22 | 26 | 30 => buffer[i] ^ 0xD5,
+            | 3 | 7 | 11 | 15 | 19 | 23 | 27 | 31 => buffer[i] ^ 0xF7,
+            | _ => buffer[i],
         };
     }
 }

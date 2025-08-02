@@ -46,21 +46,21 @@ fn main() {
                 let output = shionn.output.unwrap_or(PathBuf::from("shionn"));
                 fs::create_dir_all(&output);
                 match &caps["ext"] {
-                    "pfs" => {
+                    | "pfs" => {
                         pfs::extract(path, &output);
-                    }
-                    "pac" => {
+                    },
+                    | "pac" => {
                         pac::extract(path, &output);
-                    }
-                    "pna" => {
+                    },
+                    | "pna" => {
                         pna::extract(path, &output);
-                    }
-                    "arc" => {
+                    },
+                    | "arc" => {
                         arc::extract(path, &output, shionn.sub_extract.unwrap_or(true));
-                    }
-                    _ => {
+                    },
+                    | _ => {
                         println!("Are you sure this file is supported?(•_•)");
-                    }
+                    },
                 }
             } else {
                 println!("(•_•)");
