@@ -1,27 +1,37 @@
-use std::fs::File;
-use std::io::{self, BufWriter, Read, Seek, SeekFrom, Write};
-use std::mem::{MaybeUninit, transmute};
+use std::borrow::Cow;
+use std::fs::OpenOptions;
+use std::io::{self, BufWriter, Error, ErrorKind, Write};
 use std::path::Path;
-use std::slice;
+use std::ptr;
 
 use encoding_rs::SHIFT_JIS;
+use memmap2::MmapOptions;
 
-#[derive(Debug, Copy, Clone)]
+const OFFSET: usize = 0x804;
+
+#[derive(Debug, Clone)]
 pub struct Info {
     pub name: [u8; 32],
     pub size: u32,
     pub address: u32,
 }
+
 impl Info {
     pub fn name(&self) -> &str {
-        let len = self.name.iter().position(|&c| c == 0).unwrap_or(32);
-        str::from_utf8(&self.name[..len]).unwrap_or("")
-    }
-}
+        let mut len: usize = 0;
+        for i in self.name {
+            if i != 0x00 {
+                len += 1;
+            }
+        }
 
-pub struct Text {
-    name: [u8; 12],
-    length: u32,
+        #[cfg(debug_assertions)]
+        let data = str::from_utf8(&self.name[..len]).unwrap_or("");
+        #[cfg(not(debug_assertions))]
+        let data = unsafe { str::from_utf8_unchecked(&self.name[..len]) };
+
+        data
+    }
 }
 
 pub fn decode(buffer: &mut [u8]) {
@@ -66,57 +76,6 @@ pub fn decode(buffer: &mut [u8]) {
     }
 }
 
-pub fn extract(file: &Path, base: &Path) -> io::Result<()> {
-    let mut file = File::open(file)?;
-    let mut buffer = [0u8; 4];
-    file.read_exact(&mut buffer)?;
-    if buffer != *b"PAC " {
-        return Ok(());
-    }
-    file.seek(SeekFrom::Current(4))?;
-
-    let mut count = [0u8; 4];
-    file.read_exact(&mut count)?;
-    let count: u32 = unsafe { transmute(count) };
-
-    file.seek(SeekFrom::Start(0x804))?;
-
-    let mut buffer: Box<[MaybeUninit<u8>]> = Box::new_uninit_slice(40 * count as usize);
-    let raw_bytes =
-        unsafe { slice::from_raw_parts_mut(buffer.as_mut_ptr() as *mut u8, 40 * count as usize) };
-
-    file.read_exact(raw_bytes)?;
-    let info_ptr = Box::into_raw(buffer) as *mut Info;
-    let info: Box<[Info]> =
-        unsafe { Box::from_raw(slice::from_raw_parts_mut(info_ptr, count as usize)) };
-    let max = info
-        .iter()
-        .map(|info| info.size)
-        .max()
-        .unwrap_or(4 * 1024 * 1024);
-    let mut data: Box<[MaybeUninit<u8>]> = Box::new_uninit_slice(max as usize);
-
-    for info in info.iter() {
-        let data =
-            unsafe { slice::from_raw_parts_mut(data.as_mut_ptr() as *mut u8, info.size as usize) };
-        file.read_exact(data)?;
-        if data[0] == b'$' {
-            decode(&mut data[16..]);
-            if data[..12] == *b"$TEXT_LIST__" {
-                let json = File::create("$TEXT_LIST__.json")?;
-                let mut writer = BufWriter::new(json);
-                parse_data_to_json(data, &mut writer)?;
-            }
-        }
-        let mut output_file = File::create(base.join(info.name()))?;
-        output_file.write_all(data)?;
-    }
-    // let mut data = [0u8; 8];
-    // file.read_exact(&mut data)?;
-    // file.stream_position()?
-    Ok(())
-}
-
 pub fn parse_data_to_json<W: Write>(input: &[u8], mut out: W) -> io::Result<()> {
     #[cfg(debug_assertions)]
     {
@@ -155,12 +114,50 @@ pub fn parse_data_to_json<W: Write>(input: &[u8], mut out: W) -> io::Result<()> 
     Ok(())
 }
 
-#[cfg(test)]
-mod test {
-    use super::*;
-    use std::mem::size_of;
-    #[test]
-    fn size() {
-        assert_eq!(size_of::<Info>(), 40);
+pub fn extract(file: &Path, base: &Path) -> io::Result<()> {
+    let file = OpenOptions::new().read(true).open(file)?;
+
+    let mmap = unsafe { MmapOptions::new().map(&file)? };
+
+    if mmap[0..4] != *b"PAC " {
+        return Err(Error::new(
+            ErrorKind::InvalidData,
+            "Invalid signature: expected signature 'PAC\x20' ",
+        ));
     }
+    let count = &mmap[8..12];
+    let count = unsafe {
+        let ptr = count.as_ptr() as *const u32;
+        *ptr
+    } as usize;
+
+    let end = OFFSET + 40 * count;
+    let entry = &mmap[OFFSET..end];
+    let entry = entry.as_ptr() as *const Info;
+    let entry = unsafe { &*ptr::slice_from_raw_parts(entry, count) };
+
+    for i in 0..count {
+        let size = entry[i].size as usize;
+        let address = entry[i].address as usize;
+        let name = entry[i].name();
+        let content = &mmap[address..address + size];
+        let mut content = Cow::Borrowed(content);
+        if content[0] == b'$' {
+            decode(&mut content.to_mut()[16..]);
+            if content[..12] == *b"$TEXT_LIST__" {
+                let json = OpenOptions::new()
+                    .create(true)
+                    .write(true)
+                    .open("$TEXT_LIST__.json")?;
+                let mut writer = BufWriter::new(json);
+                parse_data_to_json(content.as_ref(), &mut writer)?;
+            }
+        }
+        let mut extract_file = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .open(base.join(name))?;
+        extract_file.write_all(content.as_ref())?;
+    }
+    Ok(())
 }
