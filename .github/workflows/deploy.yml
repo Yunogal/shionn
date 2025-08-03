@@ -1,26 +1,25 @@
-name: Deploy Docs
+name: Deploy mdBook
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          rust-version: stable
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Install mdBook
         run: cargo install mdbook
 
-      - name: Build the book
+      - name: Build mdBook
         run: mdbook build
 
       - name: Deploy to GitHub Pages
