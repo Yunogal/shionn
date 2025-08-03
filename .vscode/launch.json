@@ -1,0 +1,21 @@
+// https://code.visualstudio.com/docs/debugtest/debugging-configuration
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Rust CLI",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/target/debug/shionn",
+      "args": [
+        "--input",
+        ""
+      ],
+      "cwd": "${workspaceFolder}",
+      "stopOnEntry": false,
+      "sourceLanguages": [
+        "rust"
+      ]
+    }
+  ]
+}
