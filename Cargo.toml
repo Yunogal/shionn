@@ -1,3 +1,4 @@
+#  https://doc.rust-lang.org/cargo/reference/manifest.html
 [package]
 name = "shionn"
 version = "0.4.0"
@@ -11,7 +12,7 @@ readme="README.md"
 # repository=""
 # license="AGPL"
 license-file="LICENSE"
-keywords=["galgame","acg","vi","rust"]
+keywords=["galgame","acg","visualnovel","rust"]
 categories=["cli"]
 # workspace
 # build
@@ -26,7 +27,6 @@ categories=["cli"]
 clap = { version = "4.5.41", features = ["derive"] }
 encoding_rs = "0.8.35"
 memmap2 = "0.9.7"
-regex = "1.11.1"
 sha1 = "0.10.6"
 
 [profile.release]
