@@ -160,6 +160,7 @@ pub fn extract(file: &Path, base: &Path) -> io::Result<()> {
         };
         let name = base.join(name.as_ref());
 
+        #[inline]
         fn open_file_with_dir_create(path: &Path) -> io::Result<fs::File> {
             match OpenOptions::new()
                 .create(true)
@@ -282,6 +283,7 @@ static CRC32_TABLE: [u32; 256] = [
     0xB40BBE37, 0xC30C8EA1, 0x5A05DF1B, 0x2D02EF8D,
 ];
 
+#[cfg(debug_assertions)]
 pub fn crc32(bytes: &[u8]) -> u32 {
     let mut crc: u32 = 0xFFFF_FFFF;
     for &b in bytes {
@@ -302,6 +304,7 @@ pub fn adler32(data: &[u8]) -> u32 {
     (b << 16) | a
 }
 
+#[cfg(debug_assertions)]
 fn murmurhash2(data: &[u8]) -> u32 {
     let m: u32 = 0x5bd1e995; // 1540483477
     let r: u32 = 24;

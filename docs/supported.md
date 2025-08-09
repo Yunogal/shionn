@@ -25,6 +25,7 @@
     <br>Qruppo
     <br>Lopt software
     <br>Kinetic Novels
+    <br>Makura
     </td>
     <td>*.pfs.*</td>
     <td>pfs8</td>

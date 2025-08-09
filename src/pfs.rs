@@ -1,146 +1,164 @@
-use sha1::{Digest, Sha1};
-use std::alloc::{self, Layout, alloc, dealloc};
-use std::fs::{self, File};
-use std::io::{self, Read, Seek, SeekFrom, Write};
-use std::mem::{MaybeUninit, transmute};
+use std::borrow::Cow;
+use std::fs;
+use std::fs::OpenOptions;
+use std::io::{self, Error, ErrorKind, Write};
+use std::mem::transmute;
 use std::path::Path;
-use std::ptr;
-use std::slice;
-pub struct Info {
-    length: u32,
-    point: *const u8,
-}
-pub struct Entry<'a> {
-    pub str_data: &'a str,
-    pub address: u32,
-    pub offset: u32,
-}
 
-impl Info {
-    pub fn new(ptr: *const u8, length: u32) -> Self {
-        Self { point: ptr, length }
-    }
-
-    pub fn parse<'a>(&'a self) -> (u32, u32, Box<[Entry<'a>]>) {
-        let mut pos = 0usize;
-        let buf = unsafe { slice::from_raw_parts(self.point, self.length as usize) };
-
-        let size = u32::from_le_bytes(buf[pos..pos + 4].try_into().unwrap());
-        pos += 4;
-
-        let mut entries_uninit: Box<[MaybeUninit<Entry>]> = {
-            let layout =
-                alloc::Layout::array::<MaybeUninit<Entry>>(size as usize).unwrap();
-            let ptr = unsafe { alloc::alloc(layout) as *mut MaybeUninit<Entry> };
-            if ptr.is_null() {
-                alloc::handle_alloc_error(layout);
-            }
-            unsafe {
-                Box::from_raw(ptr::slice_from_raw_parts_mut(ptr, size as usize))
-            }
-        };
-        let mut max: u32 = 0;
-        for i in 0..size as usize {
-            let str_length =
-                u32::from_le_bytes(buf[pos..pos + 4].try_into().unwrap()) as usize;
-            pos += 4;
-
-            let str_bytes = &buf[pos..pos + str_length];
-            pos += str_length;
-
-            #[cfg(debug_assertions)]
-            let str_data = str::from_utf8(str_bytes).unwrap();
-            #[cfg(not(debug_assertions))]
-            let str_data = unsafe { str::from_utf8_unchecked(str_bytes) };
-            pos += 4;
-
-            let address = u32::from_le_bytes(buf[pos..pos + 4].try_into().unwrap());
-            pos += 4;
-
-            let offset = u32::from_le_bytes(buf[pos..pos + 4].try_into().unwrap());
-            pos += 4;
-            if max < offset {
-                max = offset
-            }
-
-            entries_uninit[i] = MaybeUninit::new(Entry {
-                str_data,
-                address,
-                offset,
-            });
-        }
-        let entries = unsafe {
-            transmute::<Box<[MaybeUninit<Entry>]>, Box<[Entry]>>(entries_uninit)
-        };
-        (max, size, entries)
-    }
-
-    pub fn sha1(&self) -> [u8; 20] {
-        unsafe {
-            let slice = slice::from_raw_parts(self.point, self.length as usize);
-            let mut hasher = Sha1::new();
-            hasher.update(slice);
-            hasher.finalize().into()
-        }
-    }
-
-    pub fn free(&self) {
-        let layout = Layout::array::<u8>(self.length as usize).unwrap();
-        unsafe {
-            dealloc(self.point as *mut u8, layout);
-        }
-    }
-}
+use memmap2::MmapOptions;
 
 pub fn extract(file: &Path, base: &Path) -> io::Result<()> {
-    let mut file = File::open(file)?;
-    let mut buffer = [0u8; 7];
-    file.read_exact(&mut buffer)?;
-    let (signature, size): ([u8; 3], [u8; 4]) = unsafe { transmute(buffer) };
+    let file = OpenOptions::new().read(true).open(file)?;
+    let mmap = unsafe { MmapOptions::new().map(&file)? };
 
-    if signature != *b"pf8" {
-        return Ok(());
+    if mmap[0..3] != *b"pf8" {
+        return Err(Error::new(
+            ErrorKind::InvalidData,
+            "Invalid signature: expected signature 'pf8' ",
+        ));
     }
-    let length: u32 = unsafe { transmute(size) };
-    let layout = Layout::array::<u8>(length as usize).unwrap();
-
-    let ptr = unsafe { alloc(layout) };
-    let buf = unsafe { slice::from_raw_parts_mut(ptr, length as usize) };
-    file.read_exact(buf)?;
-    let info = Info::new(ptr, length as u32);
-    let (max, length, entry) = info.parse();
-    let mut current = entry[0].address;
-    #[cfg(debug_assertions)]
-    debug_assert_eq!(current as u64, file.stream_position()?);
-
-    let mut file_buffer: Box<[MaybeUninit<u8>]> =
-        Box::new_uninit_slice(max as usize);
-    let key = info.sha1();
-    let mut file_path;
-    for i in 0..length as usize {
-        let address = entry[i].address;
-        if address != current {
-            file.seek(SeekFrom::Start(address as u64))?;
+    let length = bytes_to_u32_be(&mmap[3..7]) as usize;
+    let end = 7 + length;
+    let header = &mmap[7..end];
+    let key = sha1(header);
+    let count = bytes_to_u32_be(&header[..4]);
+    let mut i = 1;
+    let mut pos = 4;
+    loop {
+        if i > count {
+            break;
         }
-        let size = entry[i].offset as usize;
-        let raw_bytes = unsafe {
-            slice::from_raw_parts_mut(file_buffer.as_mut_ptr() as *mut u8, size)
-        };
-        file.read_exact(raw_bytes)?;
-        let initialized_slice: &mut [u8] = unsafe {
-            slice::from_raw_parts_mut(file_buffer.as_mut_ptr() as *mut u8, size)
-        };
-        for (i, byte) in initialized_slice.iter_mut().enumerate() {
-            *byte ^= key[i % 20];
+        let name_len = bytes_to_u32_be(&header[pos..pos + 4]) as usize;
+        pos += 4;
+        let bytes = &header[pos..pos + name_len];
+        let name: &str = unsafe { transmute(bytes) };
+        pos += name_len + 4;
+        let address = bytes_to_u32_be(&header[pos..pos + 4]) as usize;
+        pos += 4;
+        let size = bytes_to_u32_be(&header[pos..pos + 4]) as usize;
+        pos += 4;
+
+        let data = &mmap[address..address + size];
+        let mut content = Cow::Borrowed(data);
+        for (i, byte) in content.to_mut().iter_mut().enumerate() {
+            *byte ^= key[i % 20]
         }
-        file_path = base.join(entry[i].str_data);
+        let file_path = base.join(name);
         if let Some(parent) = file_path.parent() {
             fs::create_dir_all(parent)?;
         }
-        let mut output_file = File::create(file_path)?;
-        output_file.write_all(raw_bytes)?;
-        current = size as u32 + address;
+        #[inline]
+        fn open_file_with_dir_create(path: &Path) -> io::Result<fs::File> {
+            match OpenOptions::new()
+                .create(true)
+                .write(true)
+                .open(path)
+            {
+                | Ok(file) => Ok(file),
+                | Err(e) if e.kind() == ErrorKind::NotFound => {
+                    if let Some(parent) = path.parent() {
+                        fs::create_dir_all(parent)?;
+                    }
+                    OpenOptions::new()
+                        .create(true)
+                        .write(true)
+                        .open(path)
+                },
+                | Err(e) => Err(e),
+            }
+        }
+        let mut output_file = open_file_with_dir_create(&file_path)?;
+        output_file.write_all(&content)?;
+        i += 1;
     }
-    info.free();
     Ok(())
+}
+#[inline(always)]
+pub const fn bytes_to_u32_be(bytes: &[u8]) -> u32 {
+    (bytes[0] as u32)
+        | ((bytes[1] as u32) << 8)
+        | ((bytes[2] as u32) << 16)
+        | ((bytes[3] as u32) << 24)
+}
+
+#[inline(always)]
+pub const fn left_rotate(value: u32, bits: u32) -> u32 {
+    (value << bits) | (value >> (32 - bits))
+}
+
+pub fn sha1(input: &[u8]) -> [u8; 20] {
+    let mut bytes = input.to_vec();
+
+    let bit_len = (bytes.len() as u64) * 8;
+
+    bytes.push(0x80);
+
+    while (bytes.len() % 64) != 56 {
+        bytes.push(0);
+    }
+
+    bytes.extend_from_slice(&bit_len.to_be_bytes());
+
+    let mut h0: u32 = 0x67452301;
+    let mut h1: u32 = 0xEFCDAB89;
+    let mut h2: u32 = 0x98BADCFE;
+    let mut h3: u32 = 0x10325476;
+    let mut h4: u32 = 0xC3D2E1F0;
+
+    for chunk in bytes.chunks(64) {
+        let mut w = [0u32; 80];
+
+        for i in 0..16 {
+            w[i] = ((chunk[4 * i] as u32) << 24)
+                | ((chunk[4 * i + 1] as u32) << 16)
+                | ((chunk[4 * i + 2] as u32) << 8)
+                | (chunk[4 * i + 3] as u32);
+        }
+
+        for i in 16..80 {
+            w[i] = left_rotate(w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16], 1);
+        }
+
+        let mut a = h0;
+        let mut b = h1;
+        let mut c = h2;
+        let mut d = h3;
+        let mut e = h4;
+
+        for i in 0..80 {
+            let (f, k) = match i {
+                | 0..=19 => ((b & c) | ((!b) & d), 0x5A827999),
+                | 20..=39 => (b ^ c ^ d, 0x6ED9EBA1),
+                | 40..=59 => ((b & c) | (b & d) | (c & d), 0x8F1BBCDC),
+                | _ => (b ^ c ^ d, 0xCA62C1D6),
+            };
+
+            let temp = left_rotate(a, 5)
+                .wrapping_add(f)
+                .wrapping_add(e)
+                .wrapping_add(k)
+                .wrapping_add(w[i]);
+            e = d;
+            d = c;
+            c = left_rotate(b, 30);
+            b = a;
+            a = temp;
+        }
+
+        h0 = h0.wrapping_add(a);
+        h1 = h1.wrapping_add(b);
+        h2 = h2.wrapping_add(c);
+        h3 = h3.wrapping_add(d);
+        h4 = h4.wrapping_add(e);
+    }
+
+    u32_array_to_u8_array([h0, h1, h2, h3, h4])
+}
+fn u32_array_to_u8_array(hash_u32: [u32; 5]) -> [u8; 20] {
+    let mut bytes = [0u8; 20];
+    for (i, word) in hash_u32.iter().enumerate() {
+        let b = word.to_be_bytes();
+        bytes[i * 4..i * 4 + 4].copy_from_slice(&b);
+    }
+    bytes
 }
