@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="shionn.svg" alt="icon" width="250"/>
+</p>
+
 ## Installation
 
 ```sh
@@ -23,3 +27,5 @@ shionn example.pfs.1116
 #
 shionn *.ws2 -e *.exe
 ```
+
+[Supported formats](https://yunogal.github.io/shionn/supported.html)
