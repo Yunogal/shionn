@@ -37,8 +37,8 @@ impl Info {
 pub fn decode(buffer: &mut [u8]) {
     let len = buffer.len();
 
-    for (index, i) in (0..len - len % 4).enumerate() {
-        buffer[i] = match index % 32 {
+    for (index, i) in (0..len - len & 3).enumerate() {
+        buffer[i] = match index & 31 {
             | 0 => {
                 buffer[i] ^= 0xd9;
                 (buffer[i] << 4) | (buffer[i] >> 4)

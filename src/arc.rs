@@ -33,12 +33,19 @@ impl Info {
         let buf = unsafe { slice::from_raw_parts(self.point, self.size as usize) };
 
         let mut entries_uninit: Box<[MaybeUninit<Entry>]> = {
-            let layout = alloc::Layout::array::<MaybeUninit<Entry>>(self.length as usize).unwrap();
+            let layout =
+                alloc::Layout::array::<MaybeUninit<Entry>>(self.length as usize)
+                    .unwrap();
             let ptr = unsafe { alloc::alloc(layout) as *mut MaybeUninit<Entry> };
             if ptr.is_null() {
                 alloc::handle_alloc_error(layout);
             }
-            unsafe { Box::from_raw(ptr::slice_from_raw_parts_mut(ptr, self.length as usize)) }
+            unsafe {
+                Box::from_raw(ptr::slice_from_raw_parts_mut(
+                    ptr,
+                    self.length as usize,
+                ))
+            }
         };
         let mut max: u32 = 0;
 
@@ -78,8 +85,9 @@ impl Info {
                 size,
             });
         }
-        let entries =
-            unsafe { mem::transmute::<Box<[MaybeUninit<Entry>]>, Box<[Entry]>>(entries_uninit) };
+        let entries = unsafe {
+            mem::transmute::<Box<[MaybeUninit<Entry>]>, Box<[Entry]>>(entries_uninit)
+        };
 
         (max, entries)
     }
@@ -92,7 +100,11 @@ impl Info {
     }
 }
 
-pub fn extract(file: &Path, base: &Path, enable_sub_extract: bool) -> io::Result<()> {
+pub fn extract(
+    file: &Path,
+    base: &Path,
+    enable_sub_extract: bool,
+) -> io::Result<()> {
     let mut file = File::open(file)?;
     let mut buffer = [0u8; 8];
     file.read_exact(&mut buffer)?;
@@ -120,17 +132,22 @@ pub fn extract(file: &Path, base: &Path, enable_sub_extract: bool) -> io::Result
             pos += size as u64;
         }
         let name = &entry[i].str_data;
-        let pointer =
-            unsafe { slice::from_raw_parts_mut(buffer.as_mut_ptr() as *mut u8, size as usize) };
+        let pointer = unsafe {
+            slice::from_raw_parts_mut(buffer.as_mut_ptr() as *mut u8, size as usize)
+        };
         file.read_exact(pointer)?;
         if enable_sub_extract && pointer[..4] == *b"PNAP" {
             let new_base = base.join(name.as_ref());
             fs::create_dir_all(&new_base)?;
-            let sub_length = u32::from_le_bytes(pointer[16..20].try_into().unwrap()) as usize;
+            let sub_length =
+                u32::from_le_bytes(pointer[16..20].try_into().unwrap()) as usize;
             let len = 20 + sub_length * 40;
             let struct_bytes = &pointer[20..len];
             let pna_info = unsafe {
-                slice::from_raw_parts(struct_bytes.as_ptr() as *const pna::Info, sub_length)
+                slice::from_raw_parts(
+                    struct_bytes.as_ptr() as *const pna::Info,
+                    sub_length,
+                )
             };
             let mut pos = len;
             for (index, info) in pna_info.iter().enumerate() {
@@ -143,8 +160,9 @@ pub fn extract(file: &Path, base: &Path, enable_sub_extract: bool) -> io::Result
             }
             continue;
         }
-        let initialized_slice: &mut [u8] =
-            unsafe { slice::from_raw_parts_mut(buffer.as_mut_ptr() as *mut u8, size as usize) };
+        let initialized_slice: &mut [u8] = unsafe {
+            slice::from_raw_parts_mut(buffer.as_mut_ptr() as *mut u8, size as usize)
+        };
         if name[name.len() - 4..] == *".ws2" {
             for byte in initialized_slice.iter_mut() {
                 *byte = (*byte >> 2) | (*byte << 6);

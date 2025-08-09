@@ -21,12 +21,6 @@ impl Info {
         Self { point: ptr, length }
     }
 
-    fn read_u32_le_unchecked(&self, pos: usize) -> u32 {
-        unsafe {
-            let ptr = self.point.add(pos) as *const u32;
-            u32::from_le(ptr.read_unaligned())
-        }
-    }
     pub fn parse<'a>(&'a self) -> (u32, u32, Box<[Entry<'a>]>) {
         let mut pos = 0usize;
         let buf = unsafe { slice::from_raw_parts(self.point, self.length as usize) };
@@ -35,16 +29,20 @@ impl Info {
         pos += 4;
 
         let mut entries_uninit: Box<[MaybeUninit<Entry>]> = {
-            let layout = alloc::Layout::array::<MaybeUninit<Entry>>(size as usize).unwrap();
+            let layout =
+                alloc::Layout::array::<MaybeUninit<Entry>>(size as usize).unwrap();
             let ptr = unsafe { alloc::alloc(layout) as *mut MaybeUninit<Entry> };
             if ptr.is_null() {
                 alloc::handle_alloc_error(layout);
             }
-            unsafe { Box::from_raw(ptr::slice_from_raw_parts_mut(ptr, size as usize)) }
+            unsafe {
+                Box::from_raw(ptr::slice_from_raw_parts_mut(ptr, size as usize))
+            }
         };
         let mut max: u32 = 0;
         for i in 0..size as usize {
-            let str_length = u32::from_le_bytes(buf[pos..pos + 4].try_into().unwrap()) as usize;
+            let str_length =
+                u32::from_le_bytes(buf[pos..pos + 4].try_into().unwrap()) as usize;
             pos += 4;
 
             let str_bytes = &buf[pos..pos + str_length];
@@ -71,8 +69,9 @@ impl Info {
                 offset,
             });
         }
-        let entries =
-            unsafe { transmute::<Box<[MaybeUninit<Entry>]>, Box<[Entry]>>(entries_uninit) };
+        let entries = unsafe {
+            transmute::<Box<[MaybeUninit<Entry>]>, Box<[Entry]>>(entries_uninit)
+        };
         (max, size, entries)
     }
 
@@ -114,7 +113,8 @@ pub fn extract(file: &Path, base: &Path) -> io::Result<()> {
     #[cfg(debug_assertions)]
     debug_assert_eq!(current as u64, file.stream_position()?);
 
-    let mut file_buffer: Box<[MaybeUninit<u8>]> = Box::new_uninit_slice(max as usize);
+    let mut file_buffer: Box<[MaybeUninit<u8>]> =
+        Box::new_uninit_slice(max as usize);
     let key = info.sha1();
     let mut file_path;
     for i in 0..length as usize {
@@ -123,11 +123,13 @@ pub fn extract(file: &Path, base: &Path) -> io::Result<()> {
             file.seek(SeekFrom::Start(address as u64))?;
         }
         let size = entry[i].offset as usize;
-        let raw_bytes =
-            unsafe { slice::from_raw_parts_mut(file_buffer.as_mut_ptr() as *mut u8, size) };
+        let raw_bytes = unsafe {
+            slice::from_raw_parts_mut(file_buffer.as_mut_ptr() as *mut u8, size)
+        };
         file.read_exact(raw_bytes)?;
-        let initialized_slice: &mut [u8] =
-            unsafe { slice::from_raw_parts_mut(file_buffer.as_mut_ptr() as *mut u8, size) };
+        let initialized_slice: &mut [u8] = unsafe {
+            slice::from_raw_parts_mut(file_buffer.as_mut_ptr() as *mut u8, size)
+        };
         for (i, byte) in initialized_slice.iter_mut().enumerate() {
             *byte ^= key[i % 20];
         }

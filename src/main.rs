@@ -16,6 +16,7 @@ mod exe;
 mod pac;
 mod pfs;
 mod pna;
+mod ypf;
 
 #[derive(Parser)]
 #[command(version, about = "extract resource files", long_about = None)]
@@ -71,6 +72,9 @@ fn main() {
                 },
                 | "arc" => {
                     arc::extract(path, &output, shionn.sub_extract.unwrap_or(true));
+                },
+                | "ypf" => {
+                    ypf::extract(path, &output);
                 },
                 | _ => {
                     println!("Are you sure this file is supported?(•_•)");

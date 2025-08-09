@@ -25,17 +25,27 @@ pub fn extract(file: &Path, base: &Path) -> io::Result<()> {
     let mut file = File::open(file)?;
     let mut buffer = [0u8; 20];
     file.read_exact(&mut buffer)?;
-    let (signature, _, _, _, length): (u32, u32, u32, u32, u32) = unsafe { mem::transmute(buffer) };
+    let (signature, _, _, _, length): (u32, u32, u32, u32, u32) =
+        unsafe { mem::transmute(buffer) };
     if signature != 0x50414e50 {
         return Ok(());
     }
-    let mut buffer: Box<[MaybeUninit<u8>]> = Box::new_uninit_slice(40 * length as usize);
-    let raw_bytes =
-        unsafe { slice::from_raw_parts_mut(buffer.as_mut_ptr() as *mut u8, 40 * length as usize) };
+    let mut buffer: Box<[MaybeUninit<u8>]> =
+        Box::new_uninit_slice(40 * length as usize);
+    let raw_bytes = unsafe {
+        slice::from_raw_parts_mut(
+            buffer.as_mut_ptr() as *mut u8,
+            40 * length as usize,
+        )
+    };
     file.read_exact(raw_bytes)?;
     let info_ptr = Box::into_raw(buffer) as *mut Info;
-    let info: Box<[Info]> =
-        unsafe { Box::from_raw(slice::from_raw_parts_mut(info_ptr, length as usize)) };
+    let info: Box<[Info]> = unsafe {
+        Box::from_raw(slice::from_raw_parts_mut(
+            info_ptr,
+            length as usize,
+        ))
+    };
     let max = info
         .iter()
         .map(|info| info.size)
@@ -43,8 +53,12 @@ pub fn extract(file: &Path, base: &Path) -> io::Result<()> {
         .unwrap_or(4 * 1024 * 1024);
     let mut data: Box<[MaybeUninit<u8>]> = Box::new_uninit_slice(max as usize);
     for (index, info) in info.iter().enumerate() {
-        let data =
-            unsafe { slice::from_raw_parts_mut(data.as_mut_ptr() as *mut u8, info.size as usize) };
+        let data = unsafe {
+            slice::from_raw_parts_mut(
+                data.as_mut_ptr() as *mut u8,
+                info.size as usize,
+            )
+        };
         file.read_exact(data)?;
         let name = format!("{file_name}{index:03}.png");
         let mut output_file = File::create(new_base.join(name))?;

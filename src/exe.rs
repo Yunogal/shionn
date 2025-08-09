@@ -333,7 +333,8 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
     file.read_exact(bytes)?;
 
     //This is incorrect, but I want to do it this way
-    let ptr = Box::into_raw(buffer) as *mut ImageSectionHeader as *mut [ImageSectionHeader; 4];
+    let ptr = Box::into_raw(buffer) as *mut ImageSectionHeader
+        as *mut [ImageSectionHeader; 4];
     let section_header: Box<[ImageSectionHeader; 4]> = unsafe { Box::from_raw(ptr) };
     let [text, rdata, data, rsrc] = *section_header;
 
@@ -341,7 +342,8 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
     let len = text.size_of_raw_data as usize;
 
     let mut buffer: Box<[MaybeUninit<u8>]> = Box::new_uninit_slice(len);
-    let text_byte = unsafe { slice::from_raw_parts_mut(buffer.as_mut_ptr() as *mut u8, len) };
+    let text_byte =
+        unsafe { slice::from_raw_parts_mut(buffer.as_mut_ptr() as *mut u8, len) };
     file.read_exact(text_byte)?;
     let offset = get_offset(text_byte);
     if offset == 0 {
@@ -365,15 +367,17 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
             && address - image_base < rdata.virtual_address + rdata.virtual_size
     );
     //file_offset = section.PointerToRawData + (rva - section.VirtualAddress)
-    let address = address - image_base - rdata.virtual_address + rdata.pointer_to_raw_data;
+    let address =
+        address - image_base - rdata.virtual_address + rdata.pointer_to_raw_data;
 
     file.seek(SeekFrom::Start(address as u64))?;
     let mut buffer: Box<[MaybeUninit<u8>]> = Box::new_uninit_slice(1024);
     let raw_bytes: &mut [u8] =
         unsafe { slice::from_raw_parts_mut(buffer.as_mut_ptr() as *mut u8, 1024) };
     file.read_exact(raw_bytes)?;
-    let instruction_slice: &mut [u32] =
-        unsafe { std::slice::from_raw_parts_mut(raw_bytes.as_mut_ptr() as *mut u32, 256) };
+    let instruction_slice: &mut [u32] = unsafe {
+        std::slice::from_raw_parts_mut(raw_bytes.as_mut_ptr() as *mut u32, 256)
+    };
 
     //The smallest in instruction_slice
     let mut min = 0xffffffff;
@@ -393,7 +397,9 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
         }
         //important ?
         #[cfg(debug_assertions)]
-        debug_assert!(datava <= *i - image_base && *i - image_base < datava + datavs);
+        debug_assert!(
+            datava <= *i - image_base && *i - image_base < datava + datavs
+        );
         *i = *i - image_base - datava + datap;
         if *i > max {
             max = *i;
@@ -424,11 +430,13 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
     }
     file.seek(SeekFrom::Start(min as u64))?;
     let mut buffer: Box<[MaybeUninit<u8>]> = Box::new_uninit_slice(len_maybe);
-    let raw_bytes: &mut [u8] =
-        unsafe { slice::from_raw_parts_mut(buffer.as_mut_ptr() as *mut u8, len_maybe) };
+    let raw_bytes: &mut [u8] = unsafe {
+        slice::from_raw_parts_mut(buffer.as_mut_ptr() as *mut u8, len_maybe)
+    };
     file.read_exact(raw_bytes)?;
-    let arg_slice: &mut [u8] =
-        unsafe { std::slice::from_raw_parts_mut(raw_bytes.as_mut_ptr() as *mut u8, len_maybe) };
+    let arg_slice: &mut [u8] = unsafe {
+        std::slice::from_raw_parts_mut(raw_bytes.as_mut_ptr() as *mut u8, len_maybe)
+    };
 
     //
     //
@@ -550,7 +558,8 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
                         }
                         index += 1;
                     }
-                    let (data, ..) = SHIFT_JIS.decode(&initialized_slice[start..index]);
+                    let (data, ..) =
+                        SHIFT_JIS.decode(&initialized_slice[start..index]);
                     write!(
                         writer,
                         "    [\"0x{:02X}\",\"{data}\"],\n",
@@ -559,7 +568,11 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
                     arg_index += 1;
                 },
                 | 0x07 => {
-                    write!(writer, "    [\"0x07\",{}],\n", initialized_slice[index])?;
+                    write!(
+                        writer,
+                        "    [\"0x07\",{}],\n",
+                        initialized_slice[index]
+                    )?;
                     index += 1;
                     arg_index += 1;
                     for i in 0..initialized_slice[index] {
@@ -573,7 +586,8 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
                                 index += 1;
                             },
                             | 0x01 => {
-                                let bytes: [u8; 2] = initialized_slice[index..index + 2]
+                                let bytes: [u8; 2] = initialized_slice
+                                    [index..index + 2]
                                     .try_into()
                                     .unwrap();
                                 write!(
@@ -584,7 +598,8 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
                                 index += 2;
                             },
                             | 0x02 => {
-                                let bytes: [u8; 2] = initialized_slice[index..index + 2]
+                                let bytes: [u8; 2] = initialized_slice
+                                    [index..index + 2]
                                     .try_into()
                                     .unwrap();
                                 write!(
@@ -595,7 +610,8 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
                                 index += 2;
                             },
                             | 0x03 => {
-                                let bytes: [u8; 4] = initialized_slice[index..index + 4]
+                                let bytes: [u8; 4] = initialized_slice
+                                    [index..index + 4]
                                     .try_into()
                                     .unwrap();
                                 write!(
@@ -606,7 +622,8 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
                                 index += 4;
                             },
                             | 0x04 => {
-                                let bytes: [u8; 4] = initialized_slice[index..index + 4]
+                                let bytes: [u8; 4] = initialized_slice
+                                    [index..index + 4]
                                     .try_into()
                                     .unwrap();
                                 write!(
@@ -617,7 +634,8 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
                                 index += 4;
                             },
                             | 0x05 => {
-                                let bytes: [u8; 4] = initialized_slice[index..index + 4]
+                                let bytes: [u8; 4] = initialized_slice
+                                    [index..index + 4]
                                     .try_into()
                                     .unwrap();
                                 write!(
@@ -635,7 +653,8 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
                                     }
                                     index += 1;
                                 }
-                                let (data, ..) = SHIFT_JIS.decode(&initialized_slice[start..index]);
+                                let (data, ..) = SHIFT_JIS
+                                    .decode(&initialized_slice[start..index]);
                                 write!(
                                     writer,
                                     "    [\"0x{:02X}\",\"{data}\"],\n",
@@ -643,7 +662,6 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
                                 )?;
                             },
                             | 0x08 => {
-                                write!(writer, "    [\"0x08\",\"0x00\"],\n")?;
                                 index += 1;
                             },
                             | 0xFE => {
@@ -654,7 +672,6 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
                     }
                 },
                 | 0x08 => {
-                    write!(writer, "    [\"0x08\",\"0x00\"],\n")?;
                     index += 1;
                     arg_index += 1;
                 },
@@ -663,10 +680,11 @@ pub fn check(file: &Path, file2: &Path) -> io::Result<()> {
                     arg_index += 1;
                 },
                 | 0xFF => {
-                    write!(writer, "    [\"0xFF\",\"END\"]\n")?;
                     break;
                 },
-                | _ => {},
+                | _ => {
+                    break;
+                },
             }
         }
         write!(writer, "  ],\n")?;
