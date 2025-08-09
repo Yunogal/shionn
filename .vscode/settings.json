@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "windows.h": "c",
+        "winnt.h": "c",
+        "winuser.h": "c"
+    }
+}
