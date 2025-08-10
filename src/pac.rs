@@ -1,6 +1,8 @@
+use std::arch::asm;
 use std::borrow::Cow;
 use std::fs::OpenOptions;
 use std::io::{self, BufWriter, Error, ErrorKind, Write};
+use std::mem;
 use std::path::Path;
 use std::ptr;
 
@@ -24,55 +26,30 @@ impl Info {
                 len += 1;
             }
         }
-
-        #[cfg(debug_assertions)]
-        let data = str::from_utf8(&self.name[..len]).unwrap_or("");
-        #[cfg(not(debug_assertions))]
-        let data = unsafe { str::from_utf8_unchecked(&self.name[..len]) };
-
-        data
+        unsafe { mem::transmute(&self.name[..len]) }
     }
 }
 
 pub fn decode(buffer: &mut [u8]) {
-    let len = buffer.len();
-
-    for (index, i) in (0..len - len & 3).enumerate() {
-        buffer[i] = match index & 31 {
-            | 0 => {
-                buffer[i] ^= 0xd9;
-                (buffer[i] << 4) | (buffer[i] >> 4)
-            },
-            | 4 => {
-                buffer[i] ^= 0xEC;
-                (buffer[i] << 5) | (buffer[i] >> 3)
-            },
-            | 8 => {
-                buffer[i] ^= 0x76;
-                (buffer[i] << 6) | (buffer[i] >> 2)
-            },
-            | 12 => {
-                buffer[i] ^= 0x3B;
-                (buffer[i] << 7) | (buffer[i] >> 1)
-            },
-            | 16 => buffer[i] ^ 0x9d,
-            | 20 => {
-                buffer[i] ^= 0xCE;
-                (buffer[i] << 1) | (buffer[i] >> 7)
-            },
-            | 24 => {
-                buffer[i] ^= 0x67;
-                (buffer[i] << 2) | (buffer[i] >> 6)
-            },
-            | 28 => {
-                buffer[i] ^= 0xB3;
-                (buffer[i] << 3) | (buffer[i] >> 5)
-            },
-            | 1 | 5 | 9 | 13 | 17 | 21 | 25 | 29 => buffer[i] ^ 0x85,
-            | 2 | 6 | 10 | 14 | 18 | 22 | 26 | 30 => buffer[i] ^ 0xD5,
-            | 3 | 7 | 11 | 15 | 19 | 23 | 27 | 31 => buffer[i] ^ 0xF7,
-            | _ => buffer[i],
-        };
+    let ptr = ptr::slice_from_raw_parts_mut(
+        buffer.as_mut_ptr() as *mut u32,
+        buffer.len() >> 2,
+    );
+    let buf = unsafe { &mut *ptr };
+    let mut shift = 4 as i8;
+    for i in buf {
+        unsafe {
+            asm!(
+                "mov al, byte ptr [{ptr}]",
+                "rol al, cl",
+                "mov byte ptr [{ptr}], al",
+                ptr = in(reg) i,
+                in("cl") shift,
+                out("al") _,
+            );
+        }
+        *i ^= 0xF7D5859D; // 0xFF987DEE^0x084DF873
+        shift = (shift + 1) & 7;
     }
 }
 
