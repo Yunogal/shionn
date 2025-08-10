@@ -4,7 +4,7 @@ use std::path::Path;
 
 use memmap2::Mmap;
 
-use shionn::pac;
+use shionn::pac_amuse;
 
 fn main() -> io::Result<()> {
     //Folders where you want to store
@@ -17,7 +17,7 @@ fn main() -> io::Result<()> {
 
     let mmap = unsafe { Mmap::map(&file)? };
 
-    pac::extract(mmap, path)?;
+    pac_amuse::extract(mmap, path)?;
 
     Ok(())
 }

@@ -15,8 +15,8 @@ use memmap2::MmapOptions;
 mod arc;
 mod arc_bgi;
 mod exe;
-mod pac;
-mod pac_nexal;
+mod pac_amuse;
+mod pac_nexas;
 mod pfs;
 mod pna;
 mod ypf;
@@ -49,10 +49,14 @@ fn main() -> std::io::Result<()> {
         let mmap = unsafe { MmapOptions::new().map(&file)? };
         let base = &shionn.output.unwrap_or(PathBuf::from(".shionn"));
         fs::create_dir_all(base);
-        match &mmap[..] {
+        match mmap[..] {
             | [b'P', b'A', b'C', b'\x20', ..] => {
                 //PAC\x20
-                pac::extract(mmap, base);
+                pac_amuse::extract(mmap, base);
+            },
+            | [b'P', b'A', b'C', b'v', ..] => {
+                //PACv
+                pac_nexas::extract(mmap, base);
             },
             | [b'p', b'f', b'8', ..] => {
                 //pf8
@@ -62,10 +66,7 @@ fn main() -> std::io::Result<()> {
                 //YPF\0
                 ypf::extract(mmap, base);
             },
-            | [b'P', b'A', b'C', b'v', ..] => {
-                //PACv
-                pac_nexal::extract(mmap, base);
-            },
+
             | _ => {
                 println!("Are you sure this file is supported?(•_•)");
             },
