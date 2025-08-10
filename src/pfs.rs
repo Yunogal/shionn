@@ -1,22 +1,13 @@
 use std::borrow::Cow;
 use std::fs;
 use std::fs::OpenOptions;
-use std::io::{self, Error, ErrorKind, Write};
+use std::io::{self, ErrorKind, Write};
 use std::mem::transmute;
 use std::path::Path;
 
-use memmap2::MmapOptions;
+use memmap2::Mmap;
 
-pub fn extract(file: &Path, base: &Path) -> io::Result<()> {
-    let file = OpenOptions::new().read(true).open(file)?;
-    let mmap = unsafe { MmapOptions::new().map(&file)? };
-
-    if mmap[0..3] != *b"pf8" {
-        return Err(Error::new(
-            ErrorKind::InvalidData,
-            "Invalid signature: expected signature 'pf8' ",
-        ));
-    }
+pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
     let length = bytes_to_u32_be(&mmap[3..7]) as usize;
     let end = 7 + length;
     let header = &mmap[7..end];

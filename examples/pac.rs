@@ -1,16 +1,23 @@
-use std::fs;
+use std::fs::{File, create_dir_all};
+use std::io;
 use std::path::Path;
+
+use memmap2::Mmap;
 
 use shionn::pac;
 
-fn main() {
+fn main() -> io::Result<()> {
     //Folders where you want to store
     let path = Path::new(".shionn");
 
+    create_dir_all(path)?;
+
     //Replace `example.pac` with the file you actually need to use
-    let file = Path::new("example.pac");
+    let file = File::open(Path::new("example.pac"))?;
 
-    let _a = fs::create_dir_all(path);
+    let mmap = unsafe { Mmap::map(&file)? };
 
-    let _b = pac::extract(file, path);
+    pac::extract(mmap, path)?;
+
+    Ok(())
 }

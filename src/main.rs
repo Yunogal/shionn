@@ -6,14 +6,17 @@
 #![allow(clippy::needless_range_loop)]
 
 use std::fs;
+use std::fs::OpenOptions;
 use std::path::PathBuf;
 
 use clap::{CommandFactory, Parser};
+use memmap2::MmapOptions;
 
 mod arc;
 mod arc_bgi;
 mod exe;
 mod pac;
+mod pac_nexal;
 mod pfs;
 mod pna;
 mod ypf;
@@ -39,48 +42,35 @@ struct Shionn {
     extra: Option<PathBuf>,
 }
 
-fn main() {
+fn main() -> std::io::Result<()> {
     let shionn = Shionn::parse();
-
     if let Some(path) = shionn.input.or(shionn.file).as_deref() {
-        let name = path.file_name().unwrap_or_default();
-        if let Some(file_str) = name
-            .to_str()
-            .unwrap_or(" ")
-            .split('.')
-            .rev()
-            .find(|s| !s.chars().all(|c| c.is_ascii_digit()))
-        {
-            let output = shionn.output.unwrap_or(PathBuf::from(".shionn"));
-            fs::create_dir_all(&output);
-            match file_str {
-                | "ws2" => {
-                    if shionn.extra.is_none() {
-                        println!("Requires additional parameters (such as *.exe)");
-                    } else {
-                        exe::check(&shionn.extra.unwrap(), path);
-                    }
-                },
-                | "pfs" => {
-                    pfs::extract(path, &output);
-                },
-                | "pac" => {
-                    pac::extract(path, &output);
-                },
-                | "pna" => {
-                    pna::extract(path, &output);
-                },
-                | "arc" => {
-                    arc::extract(path, &output, shionn.sub_extract.unwrap_or(true));
-                },
-                | "ypf" => {
-                    ypf::extract(path, &output);
-                },
-                | _ => {
-                    println!("Are you sure this file is supported?(•_•)");
-                },
-            }
+        let file = OpenOptions::new().read(true).open(path)?;
+        let mmap = unsafe { MmapOptions::new().map(&file)? };
+        let base = &shionn.output.unwrap_or(PathBuf::from(".shionn"));
+        fs::create_dir_all(base);
+        match &mmap[..] {
+            | [b'P', b'A', b'C', b'\x20', ..] => {
+                //PAC\x20
+                pac::extract(mmap, base);
+            },
+            | [b'p', b'f', b'8', ..] => {
+                //pf8
+                pfs::extract(mmap, base);
+            },
+            | [b'Y', b'P', b'F', b'\0', ..] => {
+                //YPF\0
+                ypf::extract(mmap, base);
+            },
+            | [b'P', b'A', b'C', b'v', ..] => {
+                //PACv
+                pac_nexal::extract(mmap, base);
+            },
+            | _ => {
+                println!("Are you sure this file is supported?(•_•)");
+            },
         }
+        Ok(())
     } else {
         Shionn::command().print_help().unwrap();
         std::process::exit(0);

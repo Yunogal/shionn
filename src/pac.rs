@@ -1,13 +1,13 @@
 use std::arch::asm;
 use std::borrow::Cow;
 use std::fs::OpenOptions;
-use std::io::{self, BufWriter, Error, ErrorKind, Write};
+use std::io::{self, BufWriter, Write};
 use std::mem;
 use std::path::Path;
 use std::ptr;
 
 use encoding_rs::SHIFT_JIS;
-use memmap2::MmapOptions;
+use memmap2::Mmap;
 
 const OFFSET: usize = 0x804;
 
@@ -91,17 +91,7 @@ pub fn parse_data_to_json<W: Write>(input: &[u8], mut out: W) -> io::Result<()> 
     Ok(())
 }
 
-pub fn extract(file: &Path, base: &Path) -> io::Result<()> {
-    let file = OpenOptions::new().read(true).open(file)?;
-
-    let mmap = unsafe { MmapOptions::new().map(&file)? };
-
-    if mmap[0..4] != *b"PAC " {
-        return Err(Error::new(
-            ErrorKind::InvalidData,
-            "Invalid signature: expected signature 'PAC\x20' ",
-        ));
-    }
+pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
     let count = &mmap[8..12];
     let count = unsafe {
         let ptr = count.as_ptr() as *const u32;

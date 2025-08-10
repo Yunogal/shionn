@@ -6,7 +6,7 @@ use std::slice;
 
 use encoding_rs::SHIFT_JIS;
 use flate2::read::ZlibDecoder;
-use memmap2::MmapOptions;
+use memmap2::Mmap;
 
 pub fn decode(data: &mut [u8], key: &[u8; 4]) {
     let header = &data[4..28];
@@ -54,14 +54,7 @@ pub fn get_key(data: &[u8]) -> [u8; 4] {
     key
 }
 
-pub fn extract(file: &Path, base: &Path) -> io::Result<()> {
-    let file = OpenOptions::new().read(true).open(file)?;
-    let mmap = unsafe { MmapOptions::new().map(&file)? };
-
-    if mmap[0..4] != *b"YPF\0" {
-        return Ok(());
-    }
-
+pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
     let data = &mmap[4..16];
     let [version, count, head_size] = unsafe {
         let ptr = data.as_ptr() as *const [u32; 3];
