@@ -31,7 +31,7 @@
     <td>pfs8</td>
     <td>Artemis Engine</td>
   </tr>
-    <tr>
+  <tr>
     <td>Azarashi Soft
     <br>Whirlpool
     <br>Vanadis
@@ -40,6 +40,13 @@
     <td>*.ypf</td>
     <td>YPF\x00</td>
     <td>YU-RIS</td>
+  </tr>
+  <tr>
+    <td>GIGA
+    </td>
+    <td>*.pac</td>
+    <td>PAC</td>
+    <td>NeXAS</td>
   </tr>
 </table>
 <!-- https://vndb.org/r?f=fwYU_dRIS- -->

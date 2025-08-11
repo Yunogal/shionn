@@ -1,7 +1,7 @@
 #  https://doc.rust-lang.org/cargo/reference/manifest.html
 [package]
 name = "shionn"
-version = "0.4.3"
+version = "0.4.4"
 authors=["Yuno","tsubakii"]
 edition = "2024"
 # rust-version=1.88

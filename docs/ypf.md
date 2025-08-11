@@ -40,3 +40,7 @@
 
 `off_5B4738`即输入的字符串,因此 `key=sub_43E888(off_5B4738)`
 ![](ypf/130.png)
+
+---
+
+还可以通过应用程序来找到密钥,使用 16 进制打开`exe`,找到`_RDATA`节表(Section Table),假设`PointerToRawData`是`0x001CF800`,那么密钥就在`0x001CF850`附近

@@ -55,8 +55,8 @@ fn main() -> std::io::Result<()> {
                 //PAC\x20
                 pac_amuse::extract(mmap, base);
             },
-            | [b'P', b'A', b'C', b'v', ..] => {
-                //PACv
+            | [b'P', b'A', b'C', ..] => {
+                //PAC
                 pac_nexas::extract(mmap, base);
             },
             | [b'p', b'f', b'8', ..] => {
