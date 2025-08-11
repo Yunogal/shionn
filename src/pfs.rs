@@ -64,6 +64,7 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
     }
     Ok(())
 }
+
 #[inline(always)]
 pub const fn bytes_to_u32_be(bytes: &[u8]) -> u32 {
     (bytes[0] as u32)

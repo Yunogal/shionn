@@ -4,6 +4,7 @@
 #![allow(clippy::write_with_newline)]
 #![allow(clippy::manual_rotate)]
 #![allow(clippy::needless_range_loop)]
+#![allow(non_snake_case)]
 
 use std::fs;
 use std::fs::OpenOptions;

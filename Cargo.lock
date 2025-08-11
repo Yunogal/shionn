@@ -227,7 +227,7 @@ dependencies = [
 
 [[package]]
 name = "shionn"
-version = "0.4.0"
+version = "0.4.3"
 dependencies = [
  "clap",
  "encoding_rs",

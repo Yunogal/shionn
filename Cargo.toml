@@ -1,27 +1,36 @@
 #  https://doc.rust-lang.org/cargo/reference/manifest.html
 [package]
 name = "shionn"
-version = "0.4.0"
+version = "0.4.3"
 authors=["Yuno","tsubakii"]
 edition = "2024"
 # rust-version=1.88
-description="a rust program"
+description="A tool to see something"
 documentation="docs/"
 readme="README.md"
-# homepage=""
-# repository=""
+homepage="https://yunogal.github.io/shionn"
+repository="https://github.com/Yunogal/shionn"
 # license="AGPL"
 license-file="LICENSE"
 keywords=["galgame","acg","visualnovel","rust"]
 categories=["cli"]
 # workspace
-# build
+build="build.rs"
 # link
 # include
 # exclude
 # publish
 # metadata
 # default-run="cargo run"
+
+[lib]
+name="shionn"
+path = "src/lib.rs"
+crate-type = ["lib"]
+
+[[bin]]
+name="shionn"
+path="src/main.rs"
 
 [dependencies]
 clap = { version = "4.5.41", features = ["derive"] }

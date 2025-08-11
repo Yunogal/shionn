@@ -2,6 +2,7 @@
     "files.associations": {
         "windows.h": "c",
         "winnt.h": "c",
-        "winuser.h": "c"
+        "winuser.h": "c",
+        "sysinfoapi.h": "c"
     }
 }

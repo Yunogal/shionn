@@ -45,10 +45,7 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
     for (i, &byte) in mmap[end - length..end].iter().enumerate() {
         header[i] = mem::MaybeUninit::new(!byte);
     }
-    let header: Box<[u8]> = unsafe {
-        let ptr = Box::into_raw(header) as *mut [u8];
-        Box::from_raw(ptr)
-    };
+    let header: Box<[u8]> = unsafe { header.assume_init() };
 
     let mut reader = BitReader::new(&header);
     let tree = parse_tree(&mut reader).expect("Failed to parse tree");

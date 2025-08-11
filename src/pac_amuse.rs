@@ -36,7 +36,7 @@ pub fn decode(buffer: &mut [u8]) {
         buffer.len() >> 2,
     );
     let buf = unsafe { &mut *ptr };
-    let mut shift = 4 as i8;
+    let mut shift: i8 = 4;
     for i in buf {
         unsafe {
             asm!(
@@ -54,22 +54,18 @@ pub fn decode(buffer: &mut [u8]) {
 }
 
 pub fn parse_data_to_json<W: Write>(input: &[u8], mut out: W) -> io::Result<()> {
-    #[cfg(debug_assertions)]
-    {
-        if input.len() < 16 {
-            return Err(io::Error::new(
-                io::ErrorKind::UnexpectedEof,
-                "input too short",
-            ));
-        }
+    let length: u32 = 0;
+    let src = input[12..16].as_ptr();
+    let dst = ptr::addr_of!(length) as *mut u8;
+    unsafe {
+        ptr::copy_nonoverlapping(src, dst, 4);
     }
-    let name = String::from_utf8_lossy(&input[..12]);
-    let length = u32::from_le_bytes(input[12..16].try_into().unwrap());
     let mut pos = 16;
 
-    write!(out, "{{\n")?;
-    write!(out, "  \"name\": \"{name}\",\n")?;
-    write!(out, "  \"length\": {length:}")?;
+    write!(
+        out,
+        "{{\n  \"name\": \"$TEXT_LIST__\",\n  \"length\": {length:}"
+    )?;
 
     for i in 0..length {
         #[cfg(debug_assertions)]
