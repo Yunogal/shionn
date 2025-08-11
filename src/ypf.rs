@@ -48,7 +48,7 @@ pub fn decode(data: &mut [u8], key: &[u8; 4]) {
 }
 
 pub fn get_key(data: &[u8]) -> [u8; 4] {
-    let pos = (bytes_to_u32_be(&data[12..16]) + 0x20 + 8) as usize;
+    let pos = (bytes_to_u32_le(&data[12..16]) + 0x20 + 8) as usize;
     let ptr = (data[pos..pos + 4]).as_ptr() as *const [u8; 4];
     unsafe { *ptr }
 }
@@ -113,7 +113,7 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
     let mut key2 = [0; 4];
     for i in 0..count as usize {
         #[cfg(debug_assertions)]
-        let name_hash = bytes_to_u32_be(&header[start..start + 4]);
+        let name_hash = bytes_to_u32_le(&header[start..start + 4]);
 
         let length = table[header[start + 4] as usize] as usize;
         start += 5;
@@ -133,14 +133,14 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
 
         let compression = header[start + 1] == 0;
 
-        let real_size = bytes_to_u32_be(&header[start + 2..start + 6]) as usize;
-        let size = bytes_to_u32_be(&header[start + 6..start + 10]) as usize;
-        let offset1 = bytes_to_u32_be(&header[start + 10..start + 14]) as usize;
+        let real_size = bytes_to_u32_le(&header[start + 2..start + 6]) as usize;
+        let size = bytes_to_u32_le(&header[start + 6..start + 10]) as usize;
+        let offset1 = bytes_to_u32_le(&header[start + 10..start + 14]) as usize;
 
         start += 18 + result;
 
         #[cfg(debug_assertions)]
-        let data_hash = bytes_to_u32_be(&header[start - 4..start]);
+        let data_hash = bytes_to_u32_le(&header[start - 4..start]);
 
         #[cfg(debug_assertions)]
         debug_assert!(start as u32 <= head_size);
@@ -208,7 +208,7 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
 }
 
 #[inline(always)]
-const fn bytes_to_u32_be(bytes: &[u8]) -> u32 {
+const fn bytes_to_u32_le(bytes: &[u8]) -> u32 {
     (bytes[0] as u32)
         | ((bytes[1] as u32) << 8)
         | ((bytes[2] as u32) << 16)

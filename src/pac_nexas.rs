@@ -40,7 +40,7 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
     };
     let len = mmap.len();
     let end = len - 4;
-    let length = bytes_to_u32_be(&mmap[end..len]) as usize;
+    let length = bytes_to_u32_le(&mmap[end..len]) as usize;
     let mut header: Box<[mem::MaybeUninit<u8>]> = Box::new_uninit_slice(length);
     for (i, &byte) in mmap[end - length..end].iter().enumerate() {
         header[i] = mem::MaybeUninit::new(!byte);
@@ -70,7 +70,7 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
 }
 
 #[inline(always)]
-const fn bytes_to_u32_be(bytes: &[u8]) -> u32 {
+const fn bytes_to_u32_le(bytes: &[u8]) -> u32 {
     (bytes[0] as u32)
         | ((bytes[1] as u32) << 8)
         | ((bytes[2] as u32) << 16)

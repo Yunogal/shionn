@@ -8,25 +8,25 @@ use std::path::Path;
 use memmap2::Mmap;
 
 pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
-    let length = bytes_to_u32_be(&mmap[3..7]) as usize;
+    let length = bytes_to_u32_le(&mmap[3..7]) as usize;
     let end = 7 + length;
     let header = &mmap[7..end];
     let key = sha1(header);
-    let count = bytes_to_u32_be(&header[..4]);
+    let count = bytes_to_u32_le(&header[..4]);
     let mut i = 1;
     let mut pos = 4;
     loop {
         if i > count {
             break;
         }
-        let name_len = bytes_to_u32_be(&header[pos..pos + 4]) as usize;
+        let name_len = bytes_to_u32_le(&header[pos..pos + 4]) as usize;
         pos += 4;
         let bytes = &header[pos..pos + name_len];
         let name: &str = unsafe { transmute(bytes) };
         pos += name_len + 4;
-        let address = bytes_to_u32_be(&header[pos..pos + 4]) as usize;
+        let address = bytes_to_u32_le(&header[pos..pos + 4]) as usize;
         pos += 4;
-        let size = bytes_to_u32_be(&header[pos..pos + 4]) as usize;
+        let size = bytes_to_u32_le(&header[pos..pos + 4]) as usize;
         pos += 4;
 
         let data = &mmap[address..address + size];
@@ -68,7 +68,7 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
 }
 
 #[inline(always)]
-pub const fn bytes_to_u32_be(bytes: &[u8]) -> u32 {
+pub const fn bytes_to_u32_le(bytes: &[u8]) -> u32 {
     (bytes[0] as u32)
         | ((bytes[1] as u32) << 8)
         | ((bytes[2] as u32) << 16)
