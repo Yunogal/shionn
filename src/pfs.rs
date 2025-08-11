@@ -43,6 +43,7 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
             match OpenOptions::new()
                 .create(true)
                 .write(true)
+                .truncate(true)
                 .open(path)
             {
                 | Ok(file) => Ok(file),
@@ -53,6 +54,7 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
                     OpenOptions::new()
                         .create(true)
                         .write(true)
+                        .truncate(true)
                         .open(path)
                 },
                 | Err(e) => Err(e),

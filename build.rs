@@ -7,7 +7,7 @@ use std::thread::sleep;
 use std::time::Duration;
 
 #[repr(C)]
-struct MEMORYSTATUSEX {
+struct Memorystatusex {
     dwLength: u32,
     dwMemoryLoad: u32,
     ullTotalPhys: u64,
@@ -21,25 +21,25 @@ struct MEMORYSTATUSEX {
 
 #[repr(C)]
 #[derive(Clone, Copy)]
-struct FILETIME {
+struct Filetime {
     dwLowDateTime: u32,
     dwHighDateTime: u32,
 }
 
 #[link(name = "kernel32")]
 unsafe extern "system" {
-    fn GlobalMemoryStatusEx(lpBuffer: *mut MEMORYSTATUSEX) -> i32;
+    fn GlobalMemoryStatusEx(lpBuffer: *mut Memorystatusex) -> i32;
     fn GetSystemTimes(
-        lpIdleTime: *mut FILETIME,
-        lpKernelTime: *mut FILETIME,
-        lpUserTime: *mut FILETIME,
+        lpIdleTime: *mut Filetime,
+        lpKernelTime: *mut Filetime,
+        lpUserTime: *mut Filetime,
     ) -> i32;
 }
 
 fn memory_usage_percent() -> u32 {
     unsafe {
-        let mut mem_info = MEMORYSTATUSEX {
-            dwLength: size_of::<MEMORYSTATUSEX>() as u32,
+        let mut mem_info = Memorystatusex {
+            dwLength: size_of::<Memorystatusex>() as u32,
             dwMemoryLoad: 0,
             ullTotalPhys: 0,
             ullAvailPhys: 0,
@@ -57,25 +57,25 @@ fn memory_usage_percent() -> u32 {
     }
 }
 
-fn filetime_to_u64(ft: FILETIME) -> u64 {
+fn filetime_to_u64(ft: Filetime) -> u64 {
     ((ft.dwHighDateTime as u64) << 32) | (ft.dwLowDateTime as u64)
 }
 
 fn cpu_usage_percent() -> f64 {
     unsafe {
         let (mut idle1, mut kernel1, mut user1) = (
-            zeroed::<FILETIME>(),
-            zeroed::<FILETIME>(),
-            zeroed::<FILETIME>(),
+            zeroed::<Filetime>(),
+            zeroed::<Filetime>(),
+            zeroed::<Filetime>(),
         );
         GetSystemTimes(&mut idle1, &mut kernel1, &mut user1);
 
         sleep(Duration::from_millis(500));
 
         let (mut idle2, mut kernel2, mut user2) = (
-            zeroed::<FILETIME>(),
-            zeroed::<FILETIME>(),
-            zeroed::<FILETIME>(),
+            zeroed::<Filetime>(),
+            zeroed::<Filetime>(),
+            zeroed::<Filetime>(),
         );
         GetSystemTimes(&mut idle2, &mut kernel2, &mut user2);
 

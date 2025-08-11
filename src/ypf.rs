@@ -49,9 +49,8 @@ pub fn decode(data: &mut [u8], key: &[u8; 4]) {
 
 pub fn get_key(data: &[u8]) -> [u8; 4] {
     let pos = (bytes_to_u32_be(&data[12..16]) + 0x20 + 8) as usize;
-    let ptr = (&data[pos..pos + 4]).as_ptr() as *const [u8; 4];
-    let key = unsafe { *ptr };
-    key
+    let ptr = (data[pos..pos + 4]).as_ptr() as *const [u8; 4];
+    unsafe { *ptr }
 }
 
 pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
@@ -73,7 +72,7 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
     if version == 0x1F4 {
         table = &TABLE_01F4[..];
         key ^= 0x36;
-    } else if version >= 0x12c && version < 0x196 {
+    } else if (0x12c..0x196).contains(&version) {
         unsafe {
             TABLE[0xE1] = 0x1E;
             TABLE[0xE3] = 0x1C;
@@ -148,7 +147,7 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
 
         let mut buffer: Box<[MaybeUninit<u8>]> = Box::new_uninit_slice(real_size);
 
-        let mut mut_write_buf = unsafe {
+        let mut_write_buf = unsafe {
             slice::from_raw_parts_mut(buffer.as_mut_ptr() as *mut u8, real_size)
         };
         let name = base.join(name.as_ref());
@@ -158,6 +157,7 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
             match OpenOptions::new()
                 .create(true)
                 .write(true)
+                .truncate(true)
                 .open(path)
             {
                 | Ok(file) => Ok(file),
@@ -168,6 +168,7 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
                     OpenOptions::new()
                         .create(true)
                         .write(true)
+                        .truncate(true)
                         .open(path)
                 },
                 | Err(e) => Err(e),
@@ -187,7 +188,7 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
         }
 
         let mut decoder = ZlibDecoder::new(buf);
-        decoder.read_exact(&mut mut_write_buf)?;
+        decoder.read_exact(mut_write_buf)?;
         let mut initialized = unsafe { buffer.assume_init() };
         let data: &mut [u8] = &mut initialized;
 
@@ -302,7 +303,8 @@ fn murmurhash2(data: &[u8]) -> u32 {
     let m: u32 = 0x5bd1e995; // 1540483477
     let r: u32 = 24;
     let mut len = data.len() as u32;
-    let mut h = len ^ 0; // (0 is seed)
+    let mut h = len;
+    //let mut h = len ^ 0; // (0 is seed)
     let mut i = 0;
     while len >= 4 {
         let mut k =

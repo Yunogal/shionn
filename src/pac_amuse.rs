@@ -111,6 +111,7 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
                 let json = OpenOptions::new()
                     .create(true)
                     .write(true)
+                    .truncate(true)
                     .open("$TEXT_LIST__.json")?;
                 let mut writer = BufWriter::new(json);
                 parse_data_to_json(content.as_ref(), &mut writer)?;
@@ -119,6 +120,7 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
         let mut extract_file = OpenOptions::new()
             .create(true)
             .write(true)
+            .truncate(true)
             .open(base.join(name))?;
         extract_file.write_all(content.as_ref())?;
     }

@@ -59,6 +59,7 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
         let mut extract_file = OpenOptions::new()
             .create(true)
             .write(true)
+            .truncate(true)
             .open(base.join(i.name()))?;
         let start = i.address as usize;
         let end = start + i.size as usize;
