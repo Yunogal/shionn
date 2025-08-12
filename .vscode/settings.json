@@ -3,6 +3,7 @@
         "windows.h": "c",
         "winnt.h": "c",
         "winuser.h": "c",
-        "sysinfoapi.h": "c"
+        "sysinfoapi.h": "c",
+        "wingdi.h": "c"
     }
 }

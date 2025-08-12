@@ -7,26 +7,27 @@ use std::path::Path;
 
 use memmap2::Mmap;
 
+use crate::ptr::as_u32_unaligned;
 pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
-    let length = bytes_to_u32_le(&mmap[3..7]) as usize;
+    let length = as_u32_unaligned(&mmap[3..7]) as usize;
     let end = 7 + length;
     let header = &mmap[7..end];
     let key = sha1(header);
-    let count = bytes_to_u32_le(&header[..4]);
+    let count = as_u32_unaligned(&header[..4]);
     let mut i = 1;
     let mut pos = 4;
     loop {
         if i > count {
             break;
         }
-        let name_len = bytes_to_u32_le(&header[pos..pos + 4]) as usize;
+        let name_len = as_u32_unaligned(&header[pos..pos + 4]) as usize;
         pos += 4;
         let bytes = &header[pos..pos + name_len];
         let name: &str = unsafe { transmute(bytes) };
         pos += name_len + 4;
-        let address = bytes_to_u32_le(&header[pos..pos + 4]) as usize;
+        let address = as_u32_unaligned(&header[pos..pos + 4]) as usize;
         pos += 4;
-        let size = bytes_to_u32_le(&header[pos..pos + 4]) as usize;
+        let size = as_u32_unaligned(&header[pos..pos + 4]) as usize;
         pos += 4;
 
         let data = &mmap[address..address + size];
@@ -38,7 +39,7 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
         if let Some(parent) = file_path.parent() {
             fs::create_dir_all(parent)?;
         }
-        #[inline]
+
         fn open_file_with_dir_create(path: &Path) -> io::Result<fs::File> {
             match OpenOptions::new()
                 .create(true)
@@ -65,14 +66,6 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
         i += 1;
     }
     Ok(())
-}
-
-#[inline(always)]
-pub const fn bytes_to_u32_le(bytes: &[u8]) -> u32 {
-    (bytes[0] as u32)
-        | ((bytes[1] as u32) << 8)
-        | ((bytes[2] as u32) << 16)
-        | ((bytes[3] as u32) << 24)
 }
 
 #[inline(always)]

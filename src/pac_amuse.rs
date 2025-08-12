@@ -9,6 +9,8 @@ use std::ptr;
 use encoding_rs::SHIFT_JIS;
 use memmap2::Mmap;
 
+use crate::ptr::{as_u32, as_u32_unaligned};
+
 const OFFSET: usize = 0x804;
 
 #[derive(Debug, Clone)]
@@ -54,12 +56,8 @@ pub fn decode(buffer: &mut [u8]) {
 }
 
 pub fn parse_data_to_json<W: Write>(input: &[u8], mut out: W) -> io::Result<()> {
-    let length: u32 = 0;
-    let src = input[12..16].as_ptr();
-    let dst = ptr::addr_of!(length) as *mut u8;
-    unsafe {
-        ptr::copy_nonoverlapping(src, dst, 4);
-    }
+    let length: u32 = as_u32_unaligned(&input[12..16]);
+
     let mut pos = 16;
 
     write!(
@@ -88,11 +86,7 @@ pub fn parse_data_to_json<W: Write>(input: &[u8], mut out: W) -> io::Result<()> 
 }
 
 pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
-    let count = &mmap[8..12];
-    let count = unsafe {
-        let ptr = count.as_ptr() as *const u32;
-        *ptr
-    } as usize;
+    let count = as_u32(&mmap[8..12]) as usize;
 
     let end = OFFSET + 40 * count;
     let entry = &mmap[OFFSET..end];

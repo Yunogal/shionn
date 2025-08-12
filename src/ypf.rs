@@ -2,11 +2,13 @@ use std::fs::{self, OpenOptions};
 use std::io::{self, ErrorKind, Read, Write};
 use std::mem::MaybeUninit;
 use std::path::Path;
-use std::slice;
+use std::ptr;
 
 use encoding_rs::SHIFT_JIS;
 use flate2::read::ZlibDecoder;
 use memmap2::Mmap;
+
+use crate::ptr::{as_u32, as_u32_unaligned};
 
 pub fn decode(data: &mut [u8], key: &[u8; 4]) {
     let header = &data[4..28];
@@ -48,18 +50,15 @@ pub fn decode(data: &mut [u8], key: &[u8; 4]) {
 }
 
 pub fn get_key(data: &[u8]) -> [u8; 4] {
-    let pos = (bytes_to_u32_le(&data[12..16]) + 0x20 + 8) as usize;
+    let pos = (as_u32_unaligned(&data[12..16]) + 0x20 + 8) as usize;
     let ptr = (data[pos..pos + 4]).as_ptr() as *const [u8; 4];
     unsafe { *ptr }
 }
 
 pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
-    let data = &mmap[4..16];
-    let [version, count, head_size] = unsafe {
-        let ptr = data.as_ptr() as *const [u32; 3];
-        *ptr
-    };
-
+    let version = as_u32(&mmap[4..8]);
+    let count = as_u32(&mmap[8..12]);
+    let head_size = as_u32(&mmap[12..16]);
     let table;
     let mut key = 0xFF;
 
@@ -113,7 +112,7 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
     let mut key2 = [0; 4];
     for i in 0..count as usize {
         #[cfg(debug_assertions)]
-        let name_hash = bytes_to_u32_le(&header[start..start + 4]);
+        let name_hash = as_u32_unaligned(&header[start..start + 4]);
 
         let length = table[header[start + 4] as usize] as usize;
         start += 5;
@@ -133,14 +132,14 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
 
         let compression = header[start + 1] == 0;
 
-        let real_size = bytes_to_u32_le(&header[start + 2..start + 6]) as usize;
-        let size = bytes_to_u32_le(&header[start + 6..start + 10]) as usize;
-        let offset1 = bytes_to_u32_le(&header[start + 10..start + 14]) as usize;
+        let real_size = as_u32_unaligned(&header[start + 2..start + 6]) as usize;
+        let size = as_u32_unaligned(&header[start + 6..start + 10]) as usize;
+        let offset1 = as_u32_unaligned(&header[start + 10..start + 14]) as usize;
 
         start += 18 + result;
 
         #[cfg(debug_assertions)]
-        let data_hash = bytes_to_u32_le(&header[start - 4..start]);
+        let data_hash = as_u32_unaligned(&header[start - 4..start]);
 
         #[cfg(debug_assertions)]
         debug_assert!(start as u32 <= head_size);
@@ -148,11 +147,13 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
         let mut buffer: Box<[MaybeUninit<u8>]> = Box::new_uninit_slice(real_size);
 
         let mut_write_buf = unsafe {
-            slice::from_raw_parts_mut(buffer.as_mut_ptr() as *mut u8, real_size)
+            &mut *ptr::slice_from_raw_parts_mut(
+                buffer.as_mut_ptr() as *mut u8,
+                real_size,
+            )
         };
         let name = base.join(name.as_ref());
 
-        #[inline]
         fn open_file_with_dir_create(path: &Path) -> io::Result<fs::File> {
             match OpenOptions::new()
                 .create(true)
@@ -205,14 +206,6 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
         extract_file.write_all(data.as_ref())?;
     }
     Ok(())
-}
-
-#[inline(always)]
-const fn bytes_to_u32_le(bytes: &[u8]) -> u32 {
-    (bytes[0] as u32)
-        | ((bytes[1] as u32) << 8)
-        | ((bytes[2] as u32) << 16)
-        | ((bytes[3] as u32) << 24)
 }
 
 // fn make_crc_table() -> [u32; 256] {

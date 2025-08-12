@@ -6,6 +6,8 @@ use std::ptr;
 
 use memmap2::Mmap;
 
+use crate::ptr::{as_u32, as_u32_unaligned};
+
 struct Info {
     pub name: [u8; 0x40],
     pub address: u32,
@@ -33,14 +35,12 @@ fn size() {
 }
 
 pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
-    let data = &mmap[4..12];
-    let [count, _type] = unsafe {
-        let ptr = data.as_ptr() as *const [u32; 2];
-        *ptr
-    };
+    let count = as_u32(&mmap[4..8]);
+    let _type = as_u32(&mmap[8..12]);
+
     let len = mmap.len();
     let end = len - 4;
-    let length = bytes_to_u32_le(&mmap[end..len]) as usize;
+    let length = as_u32_unaligned(&mmap[end..len]) as usize;
     let mut header: Box<[mem::MaybeUninit<u8>]> = Box::new_uninit_slice(length);
     for (i, &byte) in mmap[end - length..end].iter().enumerate() {
         header[i] = mem::MaybeUninit::new(!byte);
@@ -67,14 +67,6 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
     }
 
     Ok(())
-}
-
-#[inline(always)]
-const fn bytes_to_u32_le(bytes: &[u8]) -> u32 {
-    (bytes[0] as u32)
-        | ((bytes[1] as u32) << 8)
-        | ((bytes[2] as u32) << 16)
-        | ((bytes[3] as u32) << 24)
 }
 
 #[derive(Debug)]
