@@ -1,5 +1,6 @@
 pub mod arc;
 pub mod arc_bgi;
+pub mod bin;
 pub mod exe;
 pub mod pac_amuse;
 pub mod pac_nexas;
