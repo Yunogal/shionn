@@ -68,7 +68,24 @@ fn main() -> std::io::Result<()> {
                 //YPF\0
                 ypf::extract(mmap, base);
             },
-
+            | [
+                b'B',
+                b'U',
+                b'R',
+                b'I',
+                b'K',
+                b'O',
+                b'\x20',
+                b'A',
+                b'R',
+                b'C',
+                b'2',
+                b'0',
+                ..,
+            ] => {
+                //BURIKO ARC20
+                arc_bgi::extract(mmap, base)?;
+            },
             | _ => {
                 println!("Are you sure this file is supported?(•_•)");
             },

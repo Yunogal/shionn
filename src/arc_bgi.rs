@@ -6,7 +6,7 @@ use std::ptr;
 
 use memmap2::Mmap;
 
-use crate::ptr::{as_u32, as_u32_unaligned};
+use crate::ptr::{as_u16_unaligned, as_u32, as_u32_unaligned};
 
 #[derive(Debug)]
 #[repr(C, align(4))]
@@ -89,6 +89,34 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
                 let content = unsafe { output.assume_init() };
                 file.write_all(&content)?;
             },
+            | b"CompressedBG___\0" => {
+                let width = as_u16_unaligned(&content[16..18]);
+                let height = as_u16_unaligned(&content[18..20]);
+                let bbp = as_u32_unaligned(&content[20..24]);
+                let length = as_u32_unaligned(&content[32..36]);
+                let mut key = as_u32_unaligned(&content[36..40]);
+                let declength = as_u32_unaligned(&content[40..44]) as usize;
+                let checksum = content[44];
+                let checkxor = content[45];
+                let version = as_u16_unaligned(&content[46..48]);
+                let check_ = &content[48..48 + declength];
+                let mut check: Box<[MaybeUninit<u8>]> =
+                    Box::new_uninit_slice(declength);
+                let mut sum: u8 = 0;
+                let mut xor = 0;
+                for i in 0..declength {
+                    let temp = check_[i].wrapping_sub(upkey(&mut key));
+                    check[i] = MaybeUninit::new(temp);
+                    sum = sum.wrapping_add(temp);
+                    xor ^= temp;
+                }
+                if sum != checksum && xor != checkxor {
+                    println!("1");
+                    return Ok(());
+                }
+                let check = unsafe { check.assume_init() };
+                return Ok(());
+            },
             | _ => {},
         }
     }
@@ -107,7 +135,7 @@ mod test {
 
 fn upkey(key: &mut u32) -> u8 {
     let k1 = 20021 * (*key & 0xffff);
-    let mut k2 = 0x53440000 | (*key >> 16);
+    let mut k2 = 0 | (*key >> 16); //0x53440000
     k2 = k2
         .wrapping_mul(20021)
         .wrapping_add(key.wrapping_mul(346));
