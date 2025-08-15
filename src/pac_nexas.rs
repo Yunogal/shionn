@@ -12,7 +12,7 @@ use crate::ptr::ReadNum;
 struct Info {
     pub name: [u8; 0x40],
     pub address: u32,
-    pub _zsize: u32,
+    pub zsize: u32,
     pub size: u32,
 }
 
@@ -65,7 +65,12 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
             .open(base.join(i.name()))?;
         let start = i.address as usize;
         let end = start + i.size as usize;
-        extract_file.write_all(&content[start..end])?
+        if i.size == i.zsize {
+            extract_file.write_all(&content[start..end])?;
+        } else {
+            //zstd or zlib
+            extract_file.write_all(&content[start..end])?;
+        }
     }
 
     Ok(())
