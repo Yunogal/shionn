@@ -37,3 +37,19 @@ fn ptr() {
     assert_eq!(b, 0x0302);
     // let b = as_u16(&slice[1..]); //ub
 }
+
+pub trait ReadNum: AsRef<[u8]> {
+    #[inline(always)]
+    fn read<T: Copy>(&self, pos: usize) -> T {
+        unsafe { *(self.as_ref().as_ptr().add(pos) as *const T) }
+    }
+
+    #[inline(always)]
+    fn read_unaligned<T: Copy>(&self, pos: usize) -> T {
+        unsafe {
+            let ptr = self.as_ref().as_ptr().add(pos) as *const T;
+            ptr.read_unaligned()
+        }
+    }
+}
+impl ReadNum for [u8] {}

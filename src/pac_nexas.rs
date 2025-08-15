@@ -1,18 +1,19 @@
 use std::fs::OpenOptions;
 use std::io::{self, Write};
-use std::mem;
+use std::mem::{MaybeUninit, transmute};
 use std::path::Path;
 use std::ptr;
 
 use memmap2::Mmap;
 
-use crate::ptr::{as_u32, as_u32_unaligned};
+use crate::ptr::ReadNum;
 
+#[derive(Debug)]
 struct Info {
     pub name: [u8; 0x40],
     pub address: u32,
+    pub _zsize: u32,
     pub size: u32,
-    pub real_size: u32,
 }
 
 impl Info {
@@ -23,7 +24,7 @@ impl Info {
                 len += 1;
             }
         }
-        unsafe { mem::transmute(&self.name[..len]) }
+        unsafe { transmute(&self.name[..len]) }
     }
 }
 
@@ -35,15 +36,17 @@ fn size() {
 }
 
 pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
-    let count = as_u32(&mmap[4..8]);
-    let _type = as_u32(&mmap[8..12]);
+    let content = &mmap[..];
 
-    let len = mmap.len();
-    let end = len - 4;
-    let length = as_u32_unaligned(&mmap[end..len]) as usize;
-    let mut header: Box<[mem::MaybeUninit<u8>]> = Box::new_uninit_slice(length);
-    for (i, &byte) in mmap[end - length..end].iter().enumerate() {
-        header[i] = mem::MaybeUninit::new(!byte);
+    let count: u32 = content.read(4);
+    let _type: u32 = content.read(8);
+
+    let end = content.len() - 4;
+    let length: u32 = content.read_unaligned(end);
+    let length = length as usize;
+    let mut header: Box<[MaybeUninit<u8>]> = Box::new_uninit_slice(length);
+    for (i, &byte) in content[end - length..end].iter().enumerate() {
+        header[i] = MaybeUninit::new(!byte);
     }
     let header: Box<[u8]> = unsafe { header.assume_init() };
 
@@ -54,7 +57,6 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
     let info: &[Info] = unsafe {
         &*ptr::slice_from_raw_parts(decoded.as_ptr() as *const Info, count as usize)
     };
-
     for i in info {
         let mut extract_file = OpenOptions::new()
             .create(true)
@@ -63,7 +65,7 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
             .open(base.join(i.name()))?;
         let start = i.address as usize;
         let end = start + i.size as usize;
-        extract_file.write_all(&mmap[start..end])?
+        extract_file.write_all(&content[start..end])?
     }
 
     Ok(())

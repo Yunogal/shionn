@@ -20,12 +20,16 @@
   </tr>
   <tr>
     <td>Azarashi Soft
-    <br>Madosoft
-    <br>vividX
-    <br>Qruppo
-    <br>Lopt software
+    <br>Confiture
+    <br>DiGination
+    <br>Jitaku Studio
     <br>Kinetic Novels
+    <br>Lopt software
+    <br>Madosoft
     <br>Makura
+    <br>Navel
+    <br>Qruppo
+    <br>vividX
     </td>
     <td>*.pfs.*</td>
     <td>pfs8</td>
@@ -33,9 +37,9 @@
   </tr>
   <tr>
     <td>Azarashi Soft
-    <br>Whirlpool
-    <br>Vanadis
     <br>Clock Up
+    <br>Vanadis
+    <br>Whirlpool
     </td>
     <td>*.ypf</td>
     <td>YPF\x00</td>
@@ -47,6 +51,32 @@
     <td>*.pac</td>
     <td>PAC</td>
     <td>NeXAS</td>
+  </tr>
+  <tr>
+    <td>HOOKSOFT
+    <br>Cabbage Soft
+    <br>SMEE
+    <br>Tily
+    </td>
+    <td>*.arc</td>
+    <td>BURIKO ARC20</td>
+    <td>BGI/Ethornell</td>
+  </tr>
+  <tr>
+    <td>WillPlus
+    <br>ensemble
+    <br>Guilty
+    </td>
+    <td>*.arc</td>
+    <td>N/A</td>
+    <td>AdvHD</td>
+  </tr>
+  <tr>
+    <td>Clochette
+    </td>
+    <td>*.int</td>
+    <td>KIF\x00</td>
+    <td>CatSystem2</td>
   </tr>
 </table>
 <!-- https://vndb.org/r?f=fwYU_dRIS- -->
