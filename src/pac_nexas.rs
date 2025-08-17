@@ -97,9 +97,9 @@ impl<'a> BitReader<'a> {
         }
     }
 
-    fn read_bit(&mut self) -> u8 {
+    fn read_bit(&mut self) -> Option<u8> {
         if self.byte_pos >= self.data.len() {
-            return 0;
+            return None;
         }
         let byte = self.data[self.byte_pos];
 
@@ -109,21 +109,21 @@ impl<'a> BitReader<'a> {
             self.bit_pos = 0;
             self.byte_pos += 1;
         }
-        bit
+        Some(bit)
     }
 
-    fn read_bits(&mut self, n: u8) -> Option<u8> {
+    fn read_byte(&mut self) -> Option<u8> {
         let mut val = 0u8;
-        for _ in 0..n {
+        for _ in 0..8 {
             val <<= 1;
-            val |= self.read_bit();
+            val |= self.read_bit()?;
         }
         Some(val)
     }
 }
 
 fn parse_tree(reader: &mut BitReader) -> Option<HuffmanNode> {
-    let bit = reader.read_bit();
+    let bit = reader.read_bit()?;
     if bit == 1 {
         let left = parse_tree(reader)?;
         let right = parse_tree(reader)?;
@@ -132,7 +132,7 @@ fn parse_tree(reader: &mut BitReader) -> Option<HuffmanNode> {
             Box::new(right),
         ))
     } else {
-        let sym = reader.read_bits(8)?;
+        let sym = reader.read_byte()?;
         Some(HuffmanNode::Leaf(sym))
     }
 }
@@ -142,46 +142,29 @@ fn decode_data(
     reader: &mut BitReader,
     output_len: usize,
 ) -> Box<[u8]> {
-    let mut output = Vec::with_capacity(output_len);
-    let mut node = root;
+    let mut output: Box<[MaybeUninit<u8>]> = Box::new_uninit_slice(output_len);
 
-    while output.len() < output_len {
-        let bit = reader.read_bit();
-
-        node = match node {
-            | HuffmanNode::Internal(left, right) => {
-                if bit == 0 {
-                    left.as_ref()
-                } else {
-                    right.as_ref()
-                }
-            },
-            | HuffmanNode::Leaf(sym) => {
-                output.push(*sym);
-                node = root;
-
-                if bit == 0 {
-                    if let HuffmanNode::Internal(left, _) = node {
+    for i in 0..output_len {
+        let mut node = root;
+        loop {
+            match node {
+                | HuffmanNode::Leaf(sym) => {
+                    output[i] = MaybeUninit::new(*sym);
+                    break;
+                },
+                | HuffmanNode::Internal(left, right) => {
+                    let bit = reader
+                        .read_bit()
+                        .expect("The bitstream ends before reaching a leaf (data/tree mismatch)");
+                    node = if bit == 0 {
                         left.as_ref()
                     } else {
-                        return output.into_boxed_slice();
-                    }
-                } else {
-                    if let HuffmanNode::Internal(_, right) = node {
                         right.as_ref()
-                    } else {
-                        return output.into_boxed_slice();
-                    }
-                }
-            },
+                    };
+                },
+            }
         }
     }
 
-    if let HuffmanNode::Leaf(sym) = node {
-        if output.len() < output_len {
-            output.push(*sym);
-        }
-    }
-
-    output.into_boxed_slice()
+    unsafe { output.assume_init() }
 }
