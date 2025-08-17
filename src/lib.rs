@@ -7,4 +7,5 @@ pub mod pac_nexas;
 pub mod pfs;
 pub mod pna;
 pub mod ptr;
+pub mod xp3;
 pub mod ypf;

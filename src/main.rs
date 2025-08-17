@@ -21,6 +21,7 @@ mod pac_nexas;
 mod pfs;
 mod pna;
 mod ptr;
+mod xp3;
 mod ypf;
 
 #[derive(Parser)]
@@ -85,6 +86,22 @@ fn main() -> std::io::Result<()> {
             ] => {
                 //BURIKO ARC20
                 arc_bgi::extract(mmap, base)?;
+            },
+            | [
+                b'X',
+                b'P',
+                b'3',
+                // b'\x0d',
+                // b'\x0a',
+                // b'\x20',
+                // b'\x0a',
+                // b'\x1a',
+                // b'\x8b',
+                // b'\x67',
+                // b'\x01',
+                ..,
+            ] => {
+                xp3::extract(mmap, base)?;
             },
             | _ => {
                 println!("Are you sure this file is supported?(•_•)");

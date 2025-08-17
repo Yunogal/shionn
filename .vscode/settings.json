@@ -1,9 +1,14 @@
 {
     "files.associations": {
+        ".gql": "graphql",
+        "*.pdf": "bibtex",
         "windows.h": "c",
         "winnt.h": "c",
         "winuser.h": "c",
         "sysinfoapi.h": "c",
-        "wingdi.h": "c"
+        "wingdi.h": "c",
+        "wmsdk.h": "c",
+        "wmsdkidl.h": "c",
+        "mfapi.h": "c"
     }
 }
