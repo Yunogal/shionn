@@ -1,8 +1,11 @@
-use std::fs::File;
+#![allow(unused_variables)]
+#![allow(dead_code)]
+
+use std::fs::{self, File};
 use std::io;
 use std::io::Read;
 use std::io::Write;
-use std::mem::MaybeUninit;
+use std::mem::{MaybeUninit, transmute};
 use std::path::Path;
 use std::ptr;
 
@@ -46,10 +49,9 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
     }
     let offset = pos as usize;
     let type_ = content[offset];
-    let data;
-    if type_ == 0x00 {
+    let data = if type_ == 0x00 {
         let size: u64 = content.read_unaligned(offset + 1);
-        data = Data::Borrowed(&content[offset + 9..offset + 9 + size as usize])
+        Data::Borrowed(&content[offset + 9..offset + 9 + size as usize])
     } else {
         let size: u64 = content.read_unaligned(offset + 1);
         let size = size as usize;
@@ -58,12 +60,14 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
             &content[offset + 17..offset + 17 + size],
             meta as usize,
         );
-        data = Data::Owned(_data);
-    }
+        Data::Owned(_data)
+    };
     let mut stream = ByteStream::new(data.as_slice());
 
     let len = stream.len();
-
+    // let mut file = File::create("a.bin")?;
+    // file.write(data.as_slice())?;
+    // return Ok(());
     while stream.pos < len {
         let signature: u32 = stream.read();
         let size: u64 = stream.read();
@@ -108,16 +112,17 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
                     data = Data::Borrowed(&content[start..end])
                 }
                 let content = if encrypt {
-                    let key = generate_key(hash);
+                    let key = genkey(hash);
+                    data
+                } else {
+                    let key = genkey(hash);
                     let data = data.as_mut();
                     xor_bytes_in_place(data, &key);
                     Data::Borrowed(data)
-                } else {
-                    data
                 };
                 let path = base.join(name.as_ref());
                 if let Some(parent) = path.parent() {
-                    std::fs::create_dir_all(parent)?; // 递归创建目录 a/b/c
+                    fs::create_dir_all(parent)?;
                 }
                 let mut file = File::create(path)?;
                 file.write_all(content.as_slice())?;
@@ -130,9 +135,11 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
 pub fn xor_bytes_in_place(data: &mut [u8], key: &[u8]) {
     for (i, byte) in data.iter_mut().enumerate() {
         *byte ^= key[i % 31];
+        *byte += KEY[i % 0x3D];
     }
 }
 fn generate_key(mut hash: u32) -> [u8; 32] {
+    //
     hash &= 0x7fffffff;
     hash = (hash << 31) | hash;
 
@@ -144,8 +151,29 @@ fn generate_key(mut hash: u32) -> [u8; 32] {
         hash = (hash & 0xfffffffe) << 23 | hash >> 8;
     }
     key[31] = MaybeUninit::new(0);
-    unsafe { std::mem::transmute::<[MaybeUninit<u8>; 32], [u8; 32]>(key) }
+    unsafe { transmute::<[MaybeUninit<u8>; 32], [u8; 32]>(key) }
 }
+fn genkey(hash: u32) -> [u8; 32] {
+    let mut k: u32 = hash & 0x7fffffff;
+
+    let mut t: [u8; 32] = [0; 32];
+    t[31] = 0;
+
+    for i in 0..31 {
+        t[i] = (k & 0xFF) as u8;
+        k = (k << 23) | (k >> 8);
+    }
+    t
+}
+const KEY: [u8; 61] = [
+    // ひとつ飛ばし恋愛
+    0x2E, 0x30, 0x88, 0xC9, 0xEC, 0x29, 0x90, 0xDE, 0x05, 0x06, 0x31, 0x99, 0x3D,
+    0x05, 0xD2, 0xBB, 0xC0, 0x20, 0x26, 0xB3, 0xA7, 0x40, 0x7A, 0x17, 0x18, 0xC4,
+    0x64, 0xF6, 0x14, 0x48, 0xEF, 0x02, 0x83, 0x98, 0xCC, 0x9E, 0x02, 0xE9, 0x5D,
+    0x60, 0x10, 0x93, 0xD9, 0x53, 0x20, 0xBD, 0x0B, 0x0C, 0x62, 0x32, 0x7B, 0x0A,
+    0xA4, 0x77, 0x81, 0x41, 0x4C, 0x66, 0x4F, 0x81, 0xF4,
+];
+
 pub fn z(buf: &[u8], size: usize) -> Box<[u8]> {
     let mut decoder = ZlibDecoder::new(buf);
     let mut buffer: Box<[MaybeUninit<u8>]> = Box::new_uninit_slice(size);

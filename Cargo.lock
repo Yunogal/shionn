@@ -233,6 +233,7 @@ dependencies = [
  "encoding_rs",
  "flate2",
  "memmap2",
+ "windows-sys",
 ]
 
 [[package]]
