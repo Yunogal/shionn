@@ -1,10 +1,12 @@
+#[path = "amuse.pac.rs"]
+pub mod amuse_pac;
 pub mod arc;
 pub mod arc_bgi;
 pub mod bin;
 pub mod exe;
 pub mod int;
-pub mod pac_amuse;
-pub mod pac_nexas;
+#[path = "nexas.pac.rs"]
+pub mod nexas_pac;
 pub mod pfs;
 pub mod pna;
 pub mod ptr;

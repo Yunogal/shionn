@@ -13,7 +13,7 @@ use crate::ptr::ReadNum;
 
 const OFFSET: usize = 0x804;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Info {
     pub name: [u8; 32],
     pub size: u32,

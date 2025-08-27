@@ -13,11 +13,13 @@ use std::path::PathBuf;
 use clap::{CommandFactory, Parser};
 use memmap2::MmapOptions;
 
+#[path = "amuse.pac.rs"]
+mod amuse_pac;
 mod arc;
 mod arc_bgi;
 mod exe;
-mod pac_amuse;
-mod pac_nexas;
+#[path = "nexas.pac.rs"]
+mod nexas_pac;
 mod pfs;
 mod pna;
 mod ptr;
@@ -55,11 +57,11 @@ fn main() -> std::io::Result<()> {
         match mmap[..] {
             | [b'P', b'A', b'C', b'\x20', ..] => {
                 //PAC\x20
-                pac_amuse::extract(mmap, base);
+                amuse_pac::extract(mmap, base);
             },
             | [b'P', b'A', b'C', ..] => {
                 //PAC
-                pac_nexas::extract(mmap, base);
+                nexas_pac::extract(mmap, base);
             },
             | [b'p', b'f', b'8', ..] => {
                 //pf8
