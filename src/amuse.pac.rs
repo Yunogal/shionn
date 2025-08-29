@@ -7,20 +7,37 @@ use std::path::Path;
 use std::ptr;
 
 use encoding_rs::SHIFT_JIS;
-use memmap2::Mmap;
 
 use crate::ptr::ReadNum;
 
 const OFFSET: usize = 0x804;
 
 #[derive(Debug)]
-pub struct Info {
+#[repr(C)]
+pub struct Pac {
+    signature: u32,
+    zero: u32,
+    count: u32,
+}
+
+#[derive(Debug)]
+#[repr(C)]
+pub struct Entry {
     pub name: [u8; 32],
     pub size: u32,
     pub address: u32,
 }
 
-impl Info {
+#[test]
+fn size() {
+    use std::mem::{align_of, size_of};
+    assert_eq!(align_of::<Pac>(), 4);
+    assert_eq!(size_of::<Pac>(), 12);
+    assert_eq!(align_of::<Entry>(), 4);
+    assert_eq!(size_of::<Entry>(), 40);
+}
+
+impl Entry {
     pub fn name(&self) -> &str {
         let mut len: usize = 0;
         for i in self.name {
@@ -85,19 +102,20 @@ pub fn parse_data_to_json<W: Write>(input: &[u8], mut out: W) -> io::Result<()> 
     Ok(())
 }
 
-pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
-    let count: u32 = mmap.read(8);
-    let count = count as usize;
+pub fn extract(content: &[u8], base: &Path) -> io::Result<()> {
+    let ptr: *const Pac = content.as_ptr().cast();
+    let pac = unsafe { &*ptr };
+    let count = pac.count as usize;
     let end = OFFSET + 40 * count;
-    let entry = &mmap[OFFSET..end];
-    let entry = entry.as_ptr() as *const Info;
+    let entry = &content[OFFSET..end];
+    let entry = entry.as_ptr() as *const Entry;
     let entry = unsafe { &*ptr::slice_from_raw_parts(entry, count) };
 
     for i in 0..count {
         let size = entry[i].size as usize;
         let address = entry[i].address as usize;
         let name = entry[i].name();
-        let content = &mmap[address..address + size];
+        let content = &content[address..address + size];
         let mut content = Cow::Borrowed(content);
         if content[0] == b'$' {
             decode(&mut content.to_mut()[16..]);

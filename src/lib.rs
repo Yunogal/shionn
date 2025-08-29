@@ -2,8 +2,9 @@
 pub mod amuse_pac;
 pub mod arc;
 pub mod arc_bgi;
-pub mod bin;
 pub mod exe;
+#[path = "favorite.bin.rs"]
+pub mod favorite_bin;
 pub mod int;
 #[path = "nexas.pac.rs"]
 pub mod nexas_pac;
