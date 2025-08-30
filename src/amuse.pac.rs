@@ -1,14 +1,12 @@
 use std::arch::asm;
 use std::borrow::Cow;
-use std::fs::OpenOptions;
+use std::fs::File;
 use std::io::{self, BufWriter, Write};
 use std::mem;
 use std::path::Path;
 use std::ptr;
 
 use encoding_rs::SHIFT_JIS;
-
-use crate::ptr::ReadNum;
 
 const OFFSET: usize = 0x804;
 
@@ -73,7 +71,10 @@ pub fn decode(buffer: &mut [u8]) {
 }
 
 pub fn parse_data_to_json<W: Write>(input: &[u8], mut out: W) -> io::Result<()> {
-    let length: u32 = input.read_unaligned(12);
+    let length: u32 = unsafe {
+        let ptr = input.as_ptr().add(12) as *const u32;
+        ptr.read_unaligned()
+    };
 
     let mut pos = 16;
 
@@ -120,20 +121,13 @@ pub fn extract(content: &[u8], base: &Path) -> io::Result<()> {
         if content[0] == b'$' {
             decode(&mut content.to_mut()[16..]);
             if content[..12] == *b"$TEXT_LIST__" {
-                let json = OpenOptions::new()
-                    .create(true)
-                    .write(true)
-                    .truncate(true)
-                    .open("$TEXT_LIST__.json")?;
+                let json = File::create("$TEXT_LIST__.json")?;
+
                 let mut writer = BufWriter::new(json);
                 parse_data_to_json(content.as_ref(), &mut writer)?;
             }
         }
-        let mut extract_file = OpenOptions::new()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(base.join(name))?;
+        let mut extract_file = File::create(base.join(name))?;
         extract_file.write_all(content.as_ref())?;
     }
     Ok(())
