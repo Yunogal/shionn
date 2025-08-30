@@ -1,6 +1,6 @@
 #[repr(C)]
-struct Gax {
-    pub signature: u32,
+pub struct Gax {
+    pub signature: u32, //'\0\0\0\x01'
     pub key: [u8; 16],
 }
 #[test]
@@ -10,7 +10,7 @@ fn size() {
     assert_eq!(align_of::<Gax>(), 4)
 }
 
-fn parce(content: &mut [u8]) {
+pub fn parce(content: &mut [u8]) {
     let (key, data) = content[4..].split_at_mut(16);
     for block in data.chunks_mut(16) {
         for (v, byte) in block.iter_mut().enumerate() {
