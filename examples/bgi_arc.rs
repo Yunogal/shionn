@@ -4,7 +4,7 @@ use std::path::Path;
 
 use memmap2::Mmap;
 
-use shionn::arc_bgi;
+use shionn::bgi_arc;
 
 fn main() -> io::Result<()> {
     let path = Path::new(".shionn");
@@ -15,7 +15,7 @@ fn main() -> io::Result<()> {
 
     let mmap = unsafe { Mmap::map(&file)? };
 
-    let _ = arc_bgi::extract(mmap, Path::new(".shionn"));
+    let _ = bgi_arc::extract(&mmap[..], Path::new(".shionn"));
 
     Ok(())
 }
