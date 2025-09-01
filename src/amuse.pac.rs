@@ -103,7 +103,7 @@ pub fn parse_data_to_json<W: Write>(input: &[u8], mut out: W) -> io::Result<()> 
     Ok(())
 }
 
-pub fn extract(content: &[u8], base: &Path) -> io::Result<()> {
+pub fn extract(content: &mut [u8], base: &Path) -> io::Result<()> {
     let ptr: *const Pac = content.as_ptr().cast();
     let pac = unsafe { &*ptr };
     let count = pac.count as usize;
@@ -116,19 +116,18 @@ pub fn extract(content: &[u8], base: &Path) -> io::Result<()> {
         let size = entry[i].size as usize;
         let address = entry[i].address as usize;
         let name = entry[i].name();
-        let content = &content[address..address + size];
-        let mut content = Cow::Borrowed(content);
-        if content[0] == b'$' {
-            decode(&mut content.to_mut()[16..]);
-            if content[..12] == *b"$TEXT_LIST__" {
+        let data = &mut content[address..address + size];
+        if data[0] == b'$' {
+            decode(&mut data[16..]);
+            if data[..12] == *b"$TEXT_LIST__" {
                 let json = File::create("$TEXT_LIST__.json")?;
 
                 let mut writer = BufWriter::new(json);
-                parse_data_to_json(content.as_ref(), &mut writer)?;
+                parse_data_to_json(data.as_ref(), &mut writer)?;
             }
         }
         let mut extract_file = File::create(base.join(name))?;
-        extract_file.write_all(content.as_ref())?;
+        extract_file.write_all(data.as_ref())?;
     }
     Ok(())
 }

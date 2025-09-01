@@ -2,7 +2,7 @@ use std::fs::{File, create_dir_all};
 use std::io;
 use std::path::Path;
 
-use memmap2::Mmap;
+use memmap2::MmapOptions;
 
 use shionn::amuse_pac;
 
@@ -15,8 +15,8 @@ fn main() -> io::Result<()> {
     //Replace `example.pac` with the file you actually need to use
     let file = File::open(Path::new("example.pac"))?;
 
-    let mmap = unsafe { Mmap::map(&file)? };
-    let content = &mmap[..];
+    let mut mmap = unsafe { MmapOptions::new().map_copy(&file)? };
+    let content = &mut mmap[..];
     amuse_pac::extract(content, path)?;
 
     Ok(())

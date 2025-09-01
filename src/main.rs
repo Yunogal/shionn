@@ -57,26 +57,26 @@ fn main() -> std::io::Result<()> {
     let shionn = Shionn::parse();
     if let Some(path) = shionn.input.or(shionn.file).as_deref() {
         let file = OpenOptions::new().read(true).open(path)?;
-        let mmap = unsafe { MmapOptions::new().map(&file)? };
+        let mut mmap = unsafe { MmapOptions::new().map_copy(&file)? };
         let base = &shionn.output.unwrap_or(PathBuf::from(".shionn"));
         fs::create_dir_all(base);
-        let content = &mmap[..];
-        match mmap[..] {
+        let content = &mut mmap[..];
+        match content {
             | [b'P', b'A', b'C', b'\x20', ..] => {
                 //PAC\x20
                 amuse_pac::extract(content, base);
             },
             | [b'P', b'A', b'C', ..] => {
                 //PAC
-                nexas_pac::extract(mmap, base);
+                nexas_pac::extract(content, base);
             },
-            | [b'p', b'f', b'8', ..] => {
-                //pf8
-                artemis_pfs::extract(mmap, base);
+            | [b'p', b'f', ..] => {
+                //pf8 //pf6
+                artemis_pfs::extract(content, base);
             },
             | [b'Y', b'P', b'F', b'\0', ..] => {
                 //YPF\0
-                ypf::extract(mmap, base);
+                //ypf::extract(mmap, base);
             },
             // | [
             //     b'B',

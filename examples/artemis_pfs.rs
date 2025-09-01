@@ -2,7 +2,7 @@ use std::fs::{File, create_dir_all};
 use std::io;
 use std::path::Path;
 
-use memmap2::Mmap;
+use memmap2::MmapOptions;
 
 use shionn::artemis_pfs;
 
@@ -11,11 +11,11 @@ fn main() -> io::Result<()> {
 
     create_dir_all(path)?;
 
-    let file = File::open(Path::new("example.pfs"))?;
+    let file = File::open(Path::new("selectoblige.pfs"))?;
 
-    let mmap = unsafe { Mmap::map(&file)? };
-
-    let _ = artemis_pfs::extract(mmap, Path::new(".shionn"));
+    let mut mmap = unsafe { MmapOptions::new().map_copy(&file)? };
+    let content = &mut mmap[..];
+    let _ = artemis_pfs::extract(content, Path::new(".shionn"));
 
     Ok(())
 }
