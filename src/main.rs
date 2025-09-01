@@ -16,7 +16,10 @@ use memmap2::MmapOptions;
 #[path = "amuse.pac.rs"]
 mod amuse_pac;
 mod arc;
-mod arc_bgi;
+#[path = "bgi.arc.rs"]
+pub mod bgi_arc;
+#[path = "bgi.dsc.rs"]
+mod bgi_dsc;
 mod exe;
 #[path = "nexas.pac.rs"]
 mod nexas_pac;
@@ -54,10 +57,11 @@ fn main() -> std::io::Result<()> {
         let mmap = unsafe { MmapOptions::new().map(&file)? };
         let base = &shionn.output.unwrap_or(PathBuf::from(".shionn"));
         fs::create_dir_all(base);
+        let content = &mmap[..];
         match mmap[..] {
             | [b'P', b'A', b'C', b'\x20', ..] => {
                 //PAC\x20
-                amuse_pac::extract(mmap, base);
+                amuse_pac::extract(content, base);
             },
             | [b'P', b'A', b'C', ..] => {
                 //PAC
@@ -71,24 +75,24 @@ fn main() -> std::io::Result<()> {
                 //YPF\0
                 ypf::extract(mmap, base);
             },
-            | [
-                b'B',
-                b'U',
-                b'R',
-                b'I',
-                b'K',
-                b'O',
-                b'\x20',
-                b'A',
-                b'R',
-                b'C',
-                b'2',
-                b'0',
-                ..,
-            ] => {
-                //BURIKO ARC20
-                arc_bgi::extract(mmap, base)?;
-            },
+            // | [
+            //     b'B',
+            //     b'U',
+            //     b'R',
+            //     b'I',
+            //     b'K',
+            //     b'O',
+            //     b'\x20',
+            //     b'A',
+            //     b'R',
+            //     b'C',
+            //     b'2',
+            //     b'0',
+            //     ..,
+            // ] => {
+            //     //BURIKO ARC20
+            //     bgi_arc::extract(content, base)?;
+            // },
             | [
                 b'X',
                 b'P',
