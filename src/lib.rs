@@ -11,6 +11,8 @@ pub mod anim_gax;
 #[path = "anim.pck.rs"]
 pub mod anim_pck;
 pub mod arc;
+#[path = "artemis.pfs.rs"]
+pub mod artemis_pfs;
 #[path = "bgi.arc.rs"]
 pub mod bgi_arc;
 #[path = "bgi.cbg.rs"]
@@ -32,12 +34,15 @@ pub mod favorite_bin;
 #[path = "favorite.hzc.rs"]
 pub mod favorite_hzc;
 pub mod int;
+#[path = "kirikiri.tlg.rs"]
+pub mod kirikiri_tlg;
+#[path = "kirikiri.xp3.rs"]
+pub mod kirikiri_xp3;
 #[path = "lilim.aos.rs"]
 pub mod lilim_aos;
 #[path = "nexas.pac.rs"]
 pub mod nexas_pac;
 pub mod ogg;
-pub mod pfs;
 pub mod pna;
 #[path = "siglus.g00.rs"]
 pub mod siglus_g00;
@@ -51,7 +56,6 @@ pub mod siglus_ovk;
 pub mod siglus_owp;
 #[path = "will.arc.rs"]
 pub mod will_arc;
-pub mod xp3;
 pub mod ypf;
 #[path = "yuka.ykc.rs"]
 pub mod yuka_ykc;

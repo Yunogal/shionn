@@ -16,18 +16,21 @@ use memmap2::MmapOptions;
 #[path = "amuse.pac.rs"]
 mod amuse_pac;
 mod arc;
+#[path = "artemis.pfs.rs"]
+mod artemis_pfs;
 #[path = "bgi.arc.rs"]
 pub mod bgi_arc;
 #[path = "bgi.dsc.rs"]
 mod bgi_dsc;
 mod exe;
+#[path = "kirikiri.xp3.rs"]
+pub mod kirikiri_xp3;
 #[path = "nexas.pac.rs"]
 mod nexas_pac;
-mod pfs;
 mod pna;
-mod ptr;
-mod xp3;
 mod ypf;
+
+mod ptr;
 
 #[derive(Parser)]
 #[command(version, about = "extract resource files", long_about = None)]
@@ -69,7 +72,7 @@ fn main() -> std::io::Result<()> {
             },
             | [b'p', b'f', b'8', ..] => {
                 //pf8
-                pfs::extract(mmap, base);
+                artemis_pfs::extract(mmap, base);
             },
             | [b'Y', b'P', b'F', b'\0', ..] => {
                 //YPF\0
@@ -107,7 +110,7 @@ fn main() -> std::io::Result<()> {
                 // b'\x01',
                 ..,
             ] => {
-                xp3::extract(mmap, base)?;
+                //xp3::extract(mmap, base)?;
             },
             | _ => {
                 println!("Are you sure this file is supported?(•_•)");

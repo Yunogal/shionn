@@ -4,7 +4,7 @@ use std::path::Path;
 
 use memmap2::Mmap;
 
-use shionn::pfs;
+use shionn::artemis_pfs;
 
 fn main() -> io::Result<()> {
     let path = Path::new(".shionn");
@@ -15,7 +15,7 @@ fn main() -> io::Result<()> {
 
     let mmap = unsafe { Mmap::map(&file)? };
 
-    let _ = pfs::extract(mmap, Path::new(".shionn"));
+    let _ = artemis_pfs::extract(mmap, Path::new(".shionn"));
 
     Ok(())
 }
