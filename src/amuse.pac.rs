@@ -1,5 +1,4 @@
 use std::arch::asm;
-use std::borrow::Cow;
 use std::fs::File;
 use std::io::{self, BufWriter, Write};
 use std::mem;

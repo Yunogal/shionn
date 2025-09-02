@@ -119,7 +119,6 @@ pub fn general(
                 }
                 let start = address as usize;
                 let end = start + size as usize;
-
                 let path = base.join(name.as_ref());
                 if let Some(parent) = path.parent() {
                     fs::create_dir_all(parent)?;

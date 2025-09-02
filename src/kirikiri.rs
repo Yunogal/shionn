@@ -12,11 +12,43 @@ macro_rules! null {
         pub struct $ident;
         impl Filter for $ident {}
     )*
-    };
+    }
 }
 null!(null);
 
-// p137
+macro_rules! truncation {
+    ($( $ident:ident ),*) => {
+        $(
+        pub struct $ident;
+        impl Filter for $ident {
+            fn filter(&self, content: &mut [u8], hash: u32) {
+                let key=hash as u8;
+                for i in content{
+                    *i^=key;
+                }
+            }
+        }
+    )*
+    }
+}
+truncation!(truncation);
+
+macro_rules! xor {
+    ($( $ident:ident => $key:literal),*) => {
+        $(
+        pub struct $ident;
+        impl Filter for $ident {
+            fn filter(&self, content: &mut [u8], _hash: u32) {
+                for i in content{
+                    *i^=$key;
+                }
+            }
+        }
+    )*
+    }
+}
+
+// p137 ASa Project
 
 macro_rules! asaproject {
     ($( $ident:ident ),*) => {
@@ -28,7 +60,7 @@ macro_rules! asaproject {
     }
 }
     )*
-    };
+    }
 }
 null!(v776, v814, v3671, v6714);
 
@@ -90,3 +122,83 @@ fn asaproject_generate_key(mut hash: u32) -> [u8; 31] {
     }
     key
 }
+
+// madosoft p3312
+asaproject!(v12288);
+
+pub struct v14888;
+
+impl Filter for v14888 {
+    fn filter(&self, content: &mut [u8], hash: u32) {
+        madosoft_filter(content, hash, 0xF2FAA99F);
+    }
+}
+
+fn madosoft_filter(content: &mut [u8], mut hash: u32, num: u32) {
+    hash ^= num;
+    hash &= 0x7fffffff;
+    hash = (hash << 31) | hash;
+    let mut key: [u8; 31] = [0; 31];
+    for i in 0..31 {
+        key[i] = hash as u8;
+        hash = (hash & 0xfffffffe) << 23 | hash >> 8;
+    }
+    for (i, byte) in content.iter_mut().enumerate() {
+        *byte ^= key[i % 31];
+    }
+}
+
+//pub struct v17823;
+//v20524
+
+// p1612 Hulotte
+
+macro_rules! Hulotte {
+    ($( $ident:ident ),*) => {
+        $(
+        pub struct $ident;
+        impl Filter for $ident {
+        fn filter(&self, content: &mut [u8], hash: u32) {
+            let key = hash as u8 ^ 0xCD;
+             for i in content {
+                *i ^= key;
+            }
+        }
+    }
+    )*
+    }
+}
+Hulotte!(v5209, v13260, v15437);
+truncation!(v17790);
+xor!(v19769=>0xCD,v23388=>0x35,v26989=>0x95,v29187=>0xF7,v31002=>0x0E,v44098=>0x3C);
+
+// p4488 NEKO WORKs
+
+// pub struct v15538;
+// impl Filter for v15538 {
+//     fn filter(&self, content: &mut [u8], hash: u32) {
+//         let mut key = hash ^ 0x1548E29C;
+//         key = hash ^ (key >> 8) ^ (key >> 16) ^ (key >> 24) ^ 0x9C;
+//         if (key & 0xFF) == 0 {
+//             key = 215;
+//         }
+//         let key = key as u8;
+//         for i in content {
+//             *i ^= key;
+//         }
+//     }
+// }
+// pub struct v17763;
+// impl Filter for v17763 {
+//     fn filter(&self, content: &mut [u8], hash: u32) {
+//         let mut key = hash ^ 0x1548E29C;
+//         key = hash ^ (key >> 8) ^ (key >> 16) ^ (key >> 24);
+//         if (key & 0xFF) == 0 {
+//             key = 215;
+//         }
+//         let key = key as u8;
+//         for i in content {
+//             *i ^= key;
+//         }
+//     }
+// }
