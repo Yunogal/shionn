@@ -1,3 +1,7 @@
+#[path = "alicesoft.afa.rs"]
+pub mod alicesoft_afa;
+#[path = "alma.pak.rs"]
+pub mod alma_pak;
 #[path = "amuse.pac.rs"]
 pub mod amuse_pac;
 #[path = "amuse.pgd.rs"]
@@ -22,6 +26,8 @@ pub mod bgi_dsc;
 pub mod bmp;
 #[path = "candysoft.fpk.rs"]
 pub mod candysoft_fpk;
+#[path = "candysoft.kg.rs"]
+pub mod candysoft_kg;
 #[path = "entis.eri.rs"]
 pub mod entis_eri;
 #[path = "entis.noa.rs"]
@@ -34,6 +40,7 @@ pub mod favorite_bin;
 #[path = "favorite.hzc.rs"]
 pub mod favorite_hzc;
 pub mod int;
+pub mod kirikiri;
 #[path = "kirikiri.tlg.rs"]
 pub mod kirikiri_tlg;
 #[path = "kirikiri.xp3.rs"]
@@ -65,3 +72,5 @@ pub mod yuka_ykg;
 pub mod yuka_yks;
 
 pub mod ptr;
+#[path = "shionn.lzss.rs"]
+pub mod shionn_lzss;

@@ -23,6 +23,7 @@ pub mod bgi_arc;
 #[path = "bgi.dsc.rs"]
 mod bgi_dsc;
 mod exe;
+mod kirikiri;
 #[path = "kirikiri.xp3.rs"]
 pub mod kirikiri_xp3;
 #[path = "nexas.pac.rs"]

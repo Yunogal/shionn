@@ -44,7 +44,7 @@ fn size() {
 pub fn general(
     content: &mut [u8],
     base: &Path,
-    game: impl Filter,
+    game: Box<dyn Filter>,
 ) -> io::Result<()> {
     let mut pos = unsafe {
         let ptr: *const u64 = content.as_ptr().add(11).cast();

@@ -29,7 +29,7 @@ fn size() {
 pub fn extract(content: &mut [u8], base: &Path) -> io::Result<()> {
     let ptr = content.as_ptr();
     let PF {
-        signature,
+        signature: _,
         len,
         count,
     } = unsafe { ptr.cast::<PF>().read_unaligned() };
