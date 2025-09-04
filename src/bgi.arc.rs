@@ -4,10 +4,6 @@ use std::mem::transmute;
 use std::path::Path;
 use std::ptr;
 
-use memmap2::Mmap;
-
-use crate::ptr::as_u32;
-
 #[derive(Debug)]
 #[repr(C, align(4))]
 pub struct Arc {
