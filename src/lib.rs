@@ -4,8 +4,6 @@ pub mod alicesoft_afa;
 pub mod alma_pak;
 #[path = "amuse.pac.rs"]
 pub mod amuse_pac;
-#[path = "amuse.pgd.rs"]
-pub mod amuse_pgd;
 #[path = "anim.dat.rs"]
 pub mod anim_dat;
 #[path = "anim.eog.rs"]
@@ -49,7 +47,6 @@ pub mod kirikiri_xp3;
 pub mod lilim_aos;
 #[path = "nexas.pac.rs"]
 pub mod nexas_pac;
-pub mod ogg;
 pub mod pna;
 #[path = "siglus.g00.rs"]
 pub mod siglus_g00;
