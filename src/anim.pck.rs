@@ -1,6 +1,8 @@
+#[repr(transparent)]
 pub struct Pck {
     pub count: u32,
 }
+#[repr(C)]
 pub struct Entry {
     pub zero: u32,
     pub address: u32,

@@ -1,30 +1,39 @@
-use std::fs::OpenOptions;
-use std::io::{self, Write};
+use std::fs::File;
+use std::io::{Result, Write};
 use std::path::Path;
 use std::ptr;
 
 use encoding_rs::SHIFT_JIS;
-use memmap2::Mmap;
 
-#[derive(Debug)]
-pub struct Entry {
-    pub name_offset: u32,
-    pub address: u32,
-    pub size: u32,
-}
+#[repr(C)]
 pub struct Bin {
     pub count: u32,
     pub name_size: u32,
 }
 
-pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
-    let content = &mmap[..];
+#[derive(Debug)]
+#[repr(C)]
+pub struct Entry {
+    pub name_offset: u32,
+    pub address: u32,
+    pub size: u32,
+}
+
+#[test]
+fn size() {
+    use std::mem::{align_of, size_of};
+    assert_eq!(align_of::<Bin>(), 4);
+    assert_eq!(size_of::<Bin>(), 8);
+    assert_eq!(align_of::<Entry>(), 4);
+    assert_eq!(size_of::<Entry>(), 12);
+}
+
+pub fn extract(content: &[u8], base: &Path) -> Result<()> {
     let ptr: *const Bin = content.as_ptr().cast();
-    let bin = unsafe { &*ptr };
-    let count = bin.count as usize;
-    let _name_size = bin.name_size;
-    let ptr: *mut Entry = unsafe { ptr.add(1) as _ };
-    let entry = unsafe { &*ptr::slice_from_raw_parts_mut(ptr, count) };
+    let &Bin { count, .. } = unsafe { &*ptr };
+    let count = count as usize;
+    let ptr: *const Entry = unsafe { ptr.add(1).cast() };
+    let entry = unsafe { &*ptr::slice_from_raw_parts(ptr, count) };
     let pos = 8 + 12 * count as usize;
     let ext1 = entry[0].address as usize;
     let ext = match &content[ext1..ext1 + 3] {
@@ -53,14 +62,8 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
         }
         let (name, ..) = SHIFT_JIS.decode(&name_content[start..end]);
         let name = name + ext;
-        let mut output_file = OpenOptions::new()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(base.join(name.as_ref()))?;
-
-        output_file.write_all(&content[address..fin])?;
+        let mut file = File::create(base.join(name.as_ref()))?;
+        file.write_all(&content[address..fin])?;
     }
-
     Ok(())
 }

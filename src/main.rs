@@ -31,8 +31,6 @@ mod nexas_pac;
 mod pna;
 mod ypf;
 
-mod ptr;
-
 #[derive(Parser)]
 #[command(version, about = "extract resource files", long_about = None)]
 struct Shionn {
