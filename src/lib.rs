@@ -30,6 +30,8 @@ pub mod candysoft_kg;
 pub mod entis_eri;
 #[path = "entis.noa.rs"]
 pub mod entis_noa;
+#[path = "escude.bin.rs"]
+pub mod escude_bin;
 pub mod exe;
 #[path = "exhibit.gyu.rs"]
 pub mod exhibit_gyu;
@@ -68,6 +70,5 @@ pub mod yuka_ykg;
 #[path = "yuka.yks.rs"]
 pub mod yuka_yks;
 
-pub mod ptr;
 #[path = "shionn.lzss.rs"]
 pub mod shionn_lzss;

@@ -1,8 +1,7 @@
-use std::{fs::File, mem::transmute};
-use std::{
-    io::Write,
-    ptr::{self, addr_of_mut},
-};
+use std::fs::File;
+use std::io::Write;
+use std::mem::transmute;
+use std::ptr;
 
 use crate::shionn_lzss;
 
@@ -27,14 +26,14 @@ pub struct Entry {
 }
 
 impl Entry {
-    pub fn name(&self) -> &str {
+    pub fn name(&self) -> &[u8] {
         let mut len: usize = 0;
         for i in self.name {
             if i != 0x00 {
                 len += 1;
             }
         }
-        unsafe { transmute(&self.name[..len]) }
+        &self.name[..len]
     }
 }
 
@@ -79,11 +78,11 @@ pub fn extract(content: &mut [u8]) {
     for i in 0..count {
         let name = entry[i].name();
         let mut key = 0;
-        for letter in name.bytes() {
+        for &letter in name {
             key = key * 0x25 + (letter as u32 | 0x20)
         }
         let offset = entry[i].offset as usize;
-        let ptr = addr_of_mut!(data[offset]);
+        let ptr = ptr::addr_of_mut!(data[offset]);
         let size = entry[i].size as usize;
         let origin = unsafe { &*ptr::slice_from_raw_parts_mut(ptr, size) };
         let slice = unsafe {
@@ -92,6 +91,7 @@ pub fn extract(content: &mut [u8]) {
         for i in slice {
             *i ^= key;
         }
+        let name: &str = unsafe { transmute(name) };
         let mut file = File::create(name).unwrap();
         file.write_all(origin).unwrap();
     }
