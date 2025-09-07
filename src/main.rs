@@ -15,7 +15,6 @@ use memmap2::MmapOptions;
 
 #[path = "amuse.pac.rs"]
 mod amuse_pac;
-mod arc;
 #[path = "artemis.pfs.rs"]
 mod artemis_pfs;
 #[path = "bgi.arc.rs"]
@@ -28,7 +27,6 @@ mod kirikiri;
 pub mod kirikiri_xp3;
 #[path = "nexas.pac.rs"]
 mod nexas_pac;
-mod pna;
 mod ypf;
 
 #[derive(Parser)]

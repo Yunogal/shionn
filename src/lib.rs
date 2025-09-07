@@ -12,7 +12,6 @@ pub mod anim_eog;
 pub mod anim_gax;
 #[path = "anim.pck.rs"]
 pub mod anim_pck;
-pub mod arc;
 #[path = "artemis.pfs.rs"]
 pub mod artemis_pfs;
 #[path = "bgi.arc.rs"]
@@ -47,7 +46,6 @@ pub mod kirikiri_xp3;
 pub mod lilim_aos;
 #[path = "nexas.pac.rs"]
 pub mod nexas_pac;
-pub mod pna;
 #[path = "siglus.g00.rs"]
 pub mod siglus_g00;
 #[path = "siglus.nwa.rs"]
@@ -58,8 +56,10 @@ pub mod siglus_omv;
 pub mod siglus_ovk;
 #[path = "siglus.owp.rs"]
 pub mod siglus_owp;
-#[path = "will.arc.rs"]
-pub mod will_arc;
+#[path = "willplus.arc.rs"]
+pub mod willplus_arc;
+#[path = "willplus.pna.rs"]
+pub mod willplus_pna;
 pub mod ypf;
 #[path = "yuka.ykc.rs"]
 pub mod yuka_ykc;
