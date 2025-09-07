@@ -41,8 +41,6 @@ pub mod favorite_bin;
 pub mod favorite_hzc;
 pub mod int;
 pub mod kirikiri;
-#[path = "kirikiri.tlg.rs"]
-pub mod kirikiri_tlg;
 #[path = "kirikiri.xp3.rs"]
 pub mod kirikiri_xp3;
 #[path = "lilim.aos.rs"]
@@ -72,3 +70,5 @@ pub mod yuka_yks;
 
 #[path = "shionn.lzss.rs"]
 pub mod shionn_lzss;
+#[path = "shionn.stream.rs"]
+pub mod shionn_stream;

@@ -12,6 +12,7 @@ fn main() -> io::Result<()> {
     let mut mmap: MmapMut = unsafe { MmapOptions::new().map_copy(&file)? };
     let content = &mut mmap[..];
     let base = Path::new(".shionn");
-    kirikiri_xp3::general(content, base, null)?;
+    let game = Box::new(null);
+    kirikiri_xp3::general(content, base, game)?;
     Ok(())
 }

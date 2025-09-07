@@ -42,7 +42,7 @@
     <br>Whirlpool
     </td>
     <td>*.ypf</td>
-    <td>YPF\x00</td>
+    <td>YPF\0</td>
     <td>YU-RIS</td>
   </tr>
   <tr>
@@ -75,8 +75,15 @@
     <td>Clochette
     </td>
     <td>*.int</td>
-    <td>KIF\x00</td>
+    <td>KIF\0</td>
     <td>CatSystem2</td>
+  </tr>
+    <tr>
+    <td>ASa Project
+    </td>
+    <td>*.xp3</td>
+    <td>XP3</td>
+    <td>KIRIKIRI</td>
   </tr>
 </table>
 <!-- https://vndb.org/r?f=fwYU_dRIS- -->
