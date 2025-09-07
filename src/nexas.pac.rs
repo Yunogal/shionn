@@ -1,22 +1,26 @@
-use std::fs::OpenOptions;
+use std::fs::File;
 use std::io::{self, Write};
 use std::mem::{MaybeUninit, transmute};
 use std::path::Path;
 use std::ptr;
 
-use memmap2::Mmap;
+#[repr(C)]
+pub struct Pac {
+    pub signature: [u8; 3], // 'PAC'
+    pub ubk: u8,
+    pub count: u32,
+    pub type_: u32,
+}
 
-use crate::ptr::ReadNum;
-
-#[derive(Debug)]
-struct Info {
+#[repr(C)]
+struct Entry {
     pub name: [u8; 0x40],
     pub address: u32,
     pub zsize: u32,
     pub size: u32,
 }
 
-impl Info {
+impl Entry {
     pub fn name(&self) -> &str {
         let mut len: usize = 0;
         for i in self.name {
@@ -30,46 +34,39 @@ impl Info {
 
 #[test]
 fn size() {
-    use std::mem::size_of;
-
-    assert_eq!(size_of::<Info>(), 0x4C);
+    use std::mem::{align_of, size_of};
+    assert_eq!(align_of::<Pac>(), 4);
+    assert_eq!(size_of::<Pac>(), 12);
+    assert_eq!(align_of::<Entry>(), 4);
+    assert_eq!(size_of::<Entry>(), 0x4C);
 }
 
-pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
-    let content = &mmap[..];
-
-    let count: u32 = content.read(4);
-    let _type: u32 = content.read(8);
-
+pub fn extract(content: &mut [u8], base: &Path) -> io::Result<()> {
+    let ptr = content.as_ptr();
+    let pac: *const Pac = ptr.cast();
+    let &Pac { count, type_, .. } = unsafe { &*pac };
     let end = content.len() - 4;
-    let length: u32 = content.read_unaligned(end);
-    let length = length as usize;
-    let mut header: Box<[MaybeUninit<u8>]> = Box::new_uninit_slice(length);
-    for (i, &byte) in content[end - length..end].iter().enumerate() {
-        header[i] = MaybeUninit::new(!byte);
+    let length = unsafe { ptr.add(end).cast::<u32>().read_unaligned() } as usize;
+    let header = &mut content[end - length..end];
+    for i in header.iter_mut() {
+        *i = !*i;
     }
-    let header: Box<[u8]> = unsafe { header.assume_init() };
-
-    let mut reader = BitReader::new(&header);
+    let mut reader = BitReader::new(header);
     let tree = parse_tree(&mut reader).expect("Failed to parse tree");
     let decoded = decode_data(&tree, &mut reader, 0x4C * count as usize);
 
-    let info: &[Info] = unsafe {
-        &*ptr::slice_from_raw_parts(decoded.as_ptr() as *const Info, count as usize)
+    let entry = unsafe {
+        &*ptr::slice_from_raw_parts(decoded.as_ptr() as *const Entry, count as usize)
     };
-    for i in info {
-        let mut extract_file = OpenOptions::new()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(base.join(i.name()))?;
+    for i in entry {
+        let mut file = File::create(base.join(i.name()))?;
         let start = i.address as usize;
         let end = start + i.size as usize;
         if i.size == i.zsize {
-            extract_file.write_all(&content[start..end])?;
+            file.write_all(&content[start..end])?;
         } else {
             //zstd or zlib
-            extract_file.write_all(&content[start..end])?;
+            file.write_all(&content[start..end])?;
         }
     }
 
