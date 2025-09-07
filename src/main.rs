@@ -27,7 +27,9 @@ mod kirikiri;
 pub mod kirikiri_xp3;
 #[path = "nexas.pac.rs"]
 mod nexas_pac;
-mod ypf;
+
+#[path = "shionn.stream.rs"]
+mod shionn_stream;
 
 #[derive(Parser)]
 #[command(version, about = "extract resource files", long_about = None)]

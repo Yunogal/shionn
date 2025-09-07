@@ -1,14 +1,39 @@
-use std::fs::{self, OpenOptions};
-use std::io::{self, ErrorKind, Read, Write};
-use std::mem::MaybeUninit;
-use std::path::Path;
+use std::fs::File;
+use std::io::{Read, Result, Write};
 use std::ptr;
 
 use encoding_rs::SHIFT_JIS;
 use flate2::read::ZlibDecoder;
-use memmap2::Mmap;
 
-use crate::ptr::{as_u32, as_u32_unaligned};
+use crate::shionn_stream::ByteStream;
+
+#[repr(C)]
+pub struct YPF {
+    pub signature: [u8; 4], // 'YPF\0'
+    pub version: u32,
+    pub count: u32,
+    pub size: u32,
+    pub pad: [u8; 16],
+}
+
+// pub struct Entry {
+//     pub name_hash: u32,
+//     pub len: u8,
+//     pub name: [u8; len],
+//     pub type_: u8,
+//     pub compression: u8,
+//     pub zsize: u32,
+//     pub size: u32,
+//     pub address: u32,
+//     pub data_hash: u32,
+// }
+
+#[test]
+fn size() {
+    use std::mem::{align_of, size_of};
+    assert_eq!(align_of::<YPF>(), 4);
+    assert_eq!(size_of::<YPF>(), 32);
+}
 
 pub fn decode(data: &mut [u8], key: &[u8; 4]) {
     let header = &data[4..28];
@@ -49,16 +74,16 @@ pub fn decode(data: &mut [u8], key: &[u8; 4]) {
     }
 }
 
-pub fn get_key(data: &[u8]) -> [u8; 4] {
-    let pos = (as_u32_unaligned(&data[12..16]) + 0x20 + 8) as usize;
-    let ptr = (data[pos..pos + 4]).as_ptr() as *const [u8; 4];
-    unsafe { *ptr }
-}
+pub fn extract(content: &mut [u8]) -> Result<()> {
+    let start_ptr = content.as_mut_ptr();
+    let ptr: *const YPF = start_ptr.cast();
+    let &YPF {
+        version,
+        count,
+        size,
+        ..
+    } = unsafe { &*ptr };
 
-pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
-    let version = as_u32(&mmap[4..8]);
-    let count = as_u32(&mmap[8..12]);
-    let head_size = as_u32(&mmap[12..16]);
     let table;
     let mut key = 0xFF;
 
@@ -105,106 +130,70 @@ pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
     } else {
         0
     };
-
-    let header = &mmap[..head_size as usize];
-
-    let mut start: usize = 0x20;
-    let mut key2 = [0; 4];
-    for i in 0..count as usize {
+    let header = &mut content[0x20..size as usize];
+    let ptr = header.as_mut_ptr();
+    let mut stream = ByteStream::new(header);
+    let mut output: Vec<u8> = Vec::with_capacity(10 * 1024 * 1024);
+    let key2 = [0; 4];
+    for _ in 0..count {
         #[cfg(debug_assertions)]
-        let name_hash = as_u32_unaligned(&header[start..start + 4]);
+        let name_hash: u32 = stream.read();
+        #[cfg(not(debug_assertions))]
+        stream.skip(4);
 
-        let length = table[header[start + 4] as usize] as usize;
-        start += 5;
-
-        let name = &header[start..start + length];
-
-        let name: Box<[u8]> = name.iter().map(|x| x ^ key).collect();
-
-        #[cfg(debug_assertions)]
-        debug_assert_eq!(name_hash, hash(&name));
-
-        let (name, ..) = SHIFT_JIS.decode(&name);
-
-        start += length;
-
-        let _type = header[start];
-
-        let compression = header[start + 1] == 0;
-
-        let real_size = as_u32_unaligned(&header[start + 2..start + 6]) as usize;
-        let size = as_u32_unaligned(&header[start + 6..start + 10]) as usize;
-        let offset1 = as_u32_unaligned(&header[start + 10..start + 14]) as usize;
-
-        start += 18 + result;
-
-        #[cfg(debug_assertions)]
-        let data_hash = as_u32_unaligned(&header[start - 4..start]);
-
-        #[cfg(debug_assertions)]
-        debug_assert!(start as u32 <= head_size);
-
-        let mut buffer: Box<[MaybeUninit<u8>]> = Box::new_uninit_slice(real_size);
-
-        let mut_write_buf = unsafe {
-            &mut *ptr::slice_from_raw_parts_mut(
-                buffer.as_mut_ptr() as *mut u8,
-                real_size,
-            )
-        };
-        let name = base.join(name.as_ref());
-
-        fn open_file_with_dir_create(path: &Path) -> io::Result<fs::File> {
-            match OpenOptions::new()
-                .create(true)
-                .write(true)
-                .truncate(true)
-                .open(path)
-            {
-                | Ok(file) => Ok(file),
-                | Err(e) if e.kind() == ErrorKind::NotFound => {
-                    if let Some(parent) = path.parent() {
-                        fs::create_dir_all(parent)?;
-                    }
-                    OpenOptions::new()
-                        .create(true)
-                        .write(true)
-                        .truncate(true)
-                        .open(path)
-                },
-                | Err(e) => Err(e),
-            }
+        let len = stream.read::<u8>() as usize;
+        let len = table[len] as usize;
+        let name =
+            unsafe { &mut *ptr::slice_from_raw_parts_mut(ptr.add(stream.pos), len) };
+        for i in name.iter_mut() {
+            *i ^= key;
         }
-
-        let mut extract_file = open_file_with_dir_create(&name)?;
-
-        let buf = &mmap[offset1..offset1 + size];
+        stream.skip(len);
+        #[cfg(debug_assertions)]
+        debug_assert_eq!(hash(name), name_hash);
+        let (name, ..) = SHIFT_JIS.decode(name);
+        let _type_: u8 = stream.read();
+        let compression: u8 = stream.read();
+        let zsize = stream.read::<u32>() as usize;
+        let size = stream.read::<u32>() as usize;
+        let address = stream.read::<u32>() as usize;
+        let buf =
+            unsafe { &*ptr::slice_from_raw_parts_mut(start_ptr.add(address), size) };
 
         #[cfg(debug_assertions)]
-        debug_assert_eq!(data_hash, hash(buf));
+        {
+            stream.skip(result);
+            let data_hash: u32 = stream.read();
+            assert_eq!(hash(&buf), data_hash);
+        }
+        #[cfg(not(debug_assertions))]
+        stream.skip(result + 4);
 
-        if compression {
-            extract_file.write_all(buf)?;
+        let mut file = File::create(name.as_ref())?;
+        if compression == 0 {
+            file.write_all(buf)?;
             continue;
         }
-
+        unsafe { output.set_len(zsize) };
         let mut decoder = ZlibDecoder::new(buf);
-        decoder.read_exact(mut_write_buf)?;
-        let mut initialized = unsafe { buffer.assume_init() };
-        let data: &mut [u8] = &mut initialized;
-
-        if data[..4] != *b"YSTB" {
-            extract_file.write_all(data.as_ref())?;
+        decoder.read_exact(output.as_mut())?;
+        if output[..4] != *b"YSTB" {
+            file.write_all(output.as_ref())?;
             continue;
         }
-
-        if i == 0 {
-            key2 = get_key(data);
-        }
-
-        decode(data, &key2);
-        extract_file.write_all(data.as_ref())?;
+        decode(&mut output, &key2);
+        file.write_all(output.as_ref())?;
     }
+    Ok(())
+}
+
+#[test]
+fn main() -> Result<()> {
+    use memmap2::MmapOptions;
+    use std::fs::File;
+    let file = File::open(r"example.ypf")?;
+    let mut mmap = unsafe { MmapOptions::new().map_copy(&file)? };
+    extract(&mut mmap[..])?;
     Ok(())
 }
 
@@ -302,11 +291,11 @@ fn murmurhash2(data: &[u8]) -> u32 {
     while len >= 4 {
         let mut k =
             u32::from_le_bytes([data[i], data[i + 1], data[i + 2], data[i + 3]]);
-        k = k.wrapping_mul(m);
+        k = k * m;
         k ^= k >> r;
-        k = k.wrapping_mul(m);
+        k = k * m;
 
-        h = h.wrapping_mul(m);
+        h = h * m;
         h ^= k;
 
         i += 4;
@@ -318,22 +307,22 @@ fn murmurhash2(data: &[u8]) -> u32 {
             h ^= (data[i + 2] as u32) << 16;
             h ^= (data[i + 1] as u32) << 8;
             h ^= data[i] as u32;
-            h = h.wrapping_mul(m);
+            h = h * m;
         },
         | 2 => {
             h ^= (data[i + 1] as u32) << 8;
             h ^= data[i] as u32;
-            h = h.wrapping_mul(m);
+            h = h * m;
         },
         | 1 => {
             h ^= data[i] as u32;
-            h = h.wrapping_mul(m);
+            h = h * m;
         },
         | _ => {},
     }
 
     h ^= h >> 13;
-    h = h.wrapping_mul(m);
+    h = h * m;
     h ^= h >> 15;
 
     h

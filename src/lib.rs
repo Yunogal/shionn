@@ -60,13 +60,14 @@ pub mod siglus_owp;
 pub mod willplus_arc;
 #[path = "willplus.pna.rs"]
 pub mod willplus_pna;
-pub mod ypf;
 #[path = "yuka.ykc.rs"]
 pub mod yuka_ykc;
 #[path = "yuka.ykg.rs"]
 pub mod yuka_ykg;
 #[path = "yuka.yks.rs"]
 pub mod yuka_yks;
+#[path = "yuris.ypf.rs"]
+pub mod yuris_ypf;
 
 #[path = "shionn.lzss.rs"]
 pub mod shionn_lzss;
