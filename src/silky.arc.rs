@@ -50,7 +50,6 @@ pub fn extract(content: &mut [u8]) -> Result<()> {
                 shionn_lzss::lz(buf, &mut output);
                 file.write_all(&output)?;
             }
-            break;
         }
     }
     Ok(())

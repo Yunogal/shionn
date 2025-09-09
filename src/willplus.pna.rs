@@ -69,7 +69,7 @@ pub fn parse(content: &[u8]) -> Result<()> {
 fn main() -> Result<()> {
     use memmap2::MmapOptions;
     use std::fs::File;
-    let file = File::open(r"F:\image\ST01A_L.pna")?;
+    let file = File::open(r"example.pna")?;
     let mut mmap = unsafe { MmapOptions::new().map_copy(&file)? };
     parse(&mut mmap[..])?;
     Ok(())

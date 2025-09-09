@@ -44,8 +44,11 @@ pub mod kirikiri;
 pub mod kirikiri_xp3;
 #[path = "lilim.aos.rs"]
 pub mod lilim_aos;
+#[path = "lusterise.med.rs"]
+pub mod lusterise_med;
 #[path = "nexas.pac.rs"]
 pub mod nexas_pac;
+pub mod png;
 #[path = "siglus.g00.rs"]
 pub mod siglus_g00;
 #[path = "siglus.nwa.rs"]
@@ -56,6 +59,8 @@ pub mod siglus_omv;
 pub mod siglus_ovk;
 #[path = "siglus.owp.rs"]
 pub mod siglus_owp;
+#[path = "silky.arc.rs"]
+pub mod silky_arc;
 #[path = "willplus.arc.rs"]
 pub mod willplus_arc;
 #[path = "willplus.pna.rs"]
