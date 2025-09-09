@@ -21,6 +21,8 @@ pub mod bmp;
 pub mod candysoft_fpk;
 #[path = "candysoft.kg.rs"]
 pub mod candysoft_kg;
+#[path = "circus.pcm.rs"]
+pub mod circus_pcm;
 #[path = "escude.bin.rs"]
 pub mod escude_bin;
 pub mod exe;
