@@ -56,6 +56,7 @@ pub fn extract(content: &[u8]) -> Result<()> {
 }
 
 #[test]
+#[ignore]
 fn main() -> Result<()> {
     use memmap2::MmapOptions;
     let file = File::open(r"example.aos")?;

@@ -66,6 +66,7 @@ pub fn parse(content: &[u8]) -> Result<()> {
     Ok(())
 }
 #[test]
+#[ignore]
 fn main() -> Result<()> {
     use memmap2::MmapOptions;
     use std::fs::File;

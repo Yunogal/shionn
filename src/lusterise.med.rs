@@ -53,10 +53,10 @@ pub fn extract(content: &[u8]) -> Result<()> {
 }
 
 #[test]
+#[ignore]
 pub fn main() -> Result<()> {
     use memmap2::Mmap;
-    let file =
-        File::open(r"F:\GALGAME\NEXTON\Lusterise\光翼戦姫エクスティア\md_bgm.med")?;
+    let file = File::open(r".med")?;
     let mmap = unsafe { Mmap::map(&file)? };
     let content = &mmap[..];
     let _ = extract(content)?;

@@ -88,7 +88,7 @@ fn size() {
     assert_eq!(align_of::<Raw>(), 4);
     assert_eq!(size_of::<Raw>(), 0x48);
     assert_eq!(align_of::<Int>(), 4);
-    assert_eq!(align_of::<Int>(), 8);
+    assert_eq!(size_of::<Int>(), 8);
 }
 
 fn get(lib: *mut c_void, name: *const u16, type_: *const u16) -> Box<[u8]> {

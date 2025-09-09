@@ -58,6 +58,7 @@ pub fn extract(content: &mut [u8]) -> Result<()> {
 }
 
 #[test]
+#[ignore]
 fn main() -> Result<()> {
     use memmap2::MmapOptions;
     use std::fs::File;

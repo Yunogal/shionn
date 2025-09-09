@@ -102,6 +102,7 @@ pub fn extract(content: &mut [u8]) -> Result<()> {
     Ok(())
 }
 #[test]
+#[ignore]
 fn main() -> Result<()> {
     use memmap2::MmapOptions;
     let file = File::open(r"example.bin")?;
