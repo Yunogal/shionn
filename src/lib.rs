@@ -61,6 +61,8 @@ pub mod siglus_ovk;
 pub mod siglus_owp;
 #[path = "silky.arc.rs"]
 pub mod silky_arc;
+#[path = "valkyria.dat.rs"]
+pub mod valkyria_dat;
 #[path = "willplus.arc.rs"]
 pub mod willplus_arc;
 #[path = "willplus.pna.rs"]
