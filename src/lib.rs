@@ -30,6 +30,8 @@ pub mod exe;
 pub mod favorite_bin;
 #[path = "favorite.hzc.rs"]
 pub mod favorite_hzc;
+#[path = "gesen18.scs.rs"]
+pub mod gesen18_scs;
 pub mod int;
 pub mod kirikiri;
 #[path = "kirikiri.xp3.rs"]
