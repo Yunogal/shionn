@@ -1,5 +1,6 @@
-use std::{fs::File, io::Result};
-use std::{io::Write, ptr};
+use std::fs::File;
+use std::io::{Result, Write};
+use std::ptr;
 
 use encoding_rs::UTF_16LE;
 

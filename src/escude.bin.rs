@@ -1,6 +1,7 @@
-use core::mem::transmute;
-use std::{fs::File, io};
-use std::{io::Write, ptr};
+use std::fs::File;
+use std::io::{Result, Write};
+use std::mem::transmute;
+use std::ptr;
 
 #[repr(C)]
 pub struct Bin {
@@ -49,7 +50,7 @@ unsafe extern "C" {
     fn strlen(s: *const c_char) -> usize;
 }
 
-pub fn extract(content: &mut [u8]) -> io::Result<()> {
+pub fn extract(content: &mut [u8]) -> Result<()> {
     let ptr: *mut Bin = content.as_mut_ptr().cast();
     let &Bin {
         mut seed,
@@ -101,9 +102,8 @@ pub fn extract(content: &mut [u8]) -> io::Result<()> {
     Ok(())
 }
 #[test]
-fn main() -> io::Result<()> {
+fn main() -> Result<()> {
     use memmap2::MmapOptions;
-    use std::fs::File;
     let file = File::open(r"example.bin")?;
     let mut mmap = unsafe { MmapOptions::new().map_copy(&file)? };
     let content = &mut mmap[..];

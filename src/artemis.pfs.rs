@@ -1,8 +1,10 @@
-use std::fs::{self, File};
-use std::io::{self, Write};
+use std::fs::{File, create_dir_all};
+use std::io::{Result, Write};
 use std::mem::transmute;
 use std::path::Path;
 use std::ptr;
+
+use crate::shionn_stream::ByteStream;
 
 #[repr(C, packed)]
 pub struct PF {
@@ -26,7 +28,7 @@ fn size() {
     assert_eq!(size_of::<PF>(), 11);
 }
 
-pub fn extract(content: &mut [u8], base: &Path) -> io::Result<()> {
+pub fn extract(content: &mut [u8], base: &Path) -> Result<()> {
     let ptr = content.as_ptr();
     let PF {
         signature: _,
@@ -56,7 +58,7 @@ pub fn extract(content: &mut [u8], base: &Path) -> io::Result<()> {
         }
         let file_path = base.join(name);
         if let Some(parent) = file_path.parent() {
-            fs::create_dir_all(parent)?;
+            create_dir_all(parent)?;
         }
         let mut file = File::create(file_path)?;
         file.write_all(&data)?;
@@ -144,57 +146,4 @@ fn u32_array_to_u8_array(hash_u32: [u32; 5]) -> [u8; 20] {
         bytes[i * 4..i * 4 + 4].copy_from_slice(&b);
     }
     bytes
-}
-pub struct ByteStream<'a> {
-    pub buf: &'a [u8],
-    pub pos: usize,
-}
-
-impl<'a> ByteStream<'a> {
-    #[inline(always)]
-    pub fn new(buf: &'a [u8]) -> Self {
-        Self { buf, pos: 0 }
-    }
-
-    #[inline(always)]
-    pub const fn read_aligned<T: Copy>(&mut self) -> T {
-        let temp = unsafe { *(self.buf.as_ptr().add(self.pos) as *const T) };
-        self.pos += size_of::<T>();
-        temp
-    }
-
-    #[inline(always)]
-    pub const fn read<T: Copy>(&mut self) -> T {
-        let ptr = unsafe { self.buf.as_ptr().add(self.pos) as *const T };
-        self.pos += size_of::<T>();
-        unsafe { ptr.read_unaligned() }
-    }
-
-    #[inline(always)]
-    pub fn skip(&mut self, n: usize) {
-        self.pos += n;
-    }
-
-    #[inline(always)]
-    pub fn seek(&mut self, n: usize) {
-        self.pos = n;
-    }
-
-    #[inline(always)]
-    pub const fn len(&self) -> usize {
-        self.buf.len()
-    }
-
-    #[inline(always)]
-    fn get(&mut self, n: usize) -> &'a [u8] {
-        let start = self.pos;
-        self.pos += n;
-
-        unsafe { &*(&self.buf[start..start + n] as *const [u8]) }
-    }
-
-    #[inline(always)]
-    pub fn address(&self) -> *const u8 {
-        ptr::addr_of!(self.buf[self.pos])
-    }
 }

@@ -1,6 +1,6 @@
-use std::io::{Read, Result};
+use std::fs::File;
+use std::io::{Read, Result, Write};
 use std::ptr;
-use std::{fs::File, io::Write};
 
 use encoding_rs::SHIFT_JIS;
 use flate2::read::ZlibDecoder;

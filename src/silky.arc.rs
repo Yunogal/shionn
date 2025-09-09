@@ -1,6 +1,6 @@
-use core::mem::transmute;
 use std::fs::File;
 use std::io::{Result, Write};
+use std::mem::transmute;
 use std::ptr;
 
 use crate::shionn_lzss;

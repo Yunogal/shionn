@@ -1,6 +1,6 @@
-use std::io::{self, BufWriter};
+use std::fs::File;
+use std::io::{BufWriter, Result, Write};
 use std::ptr;
-use std::{fs::File, io::Write};
 
 #[repr(C, packed)]
 pub struct Bmp {
@@ -49,7 +49,7 @@ fn size() {
     assert_eq!(align_of::<Bmp>(), 1);
     assert_eq!(size_of::<Bmp>(), 0x36);
 }
-pub fn save(width: u32, height: u32, name: &str, data: &[u8]) -> io::Result<()> {
+pub fn save(width: u32, height: u32, name: &str, data: &[u8]) -> Result<()> {
     let bmp = Bmp::new(width, height, data.len() as u32);
     let ptr = ptr::addr_of!(bmp);
     let file = File::create(name)?;

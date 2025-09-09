@@ -1,17 +1,15 @@
 use std::fs::File;
-use std::io::{self, Write};
+use std::io::{Result, Write};
 use std::mem::transmute;
 use std::path::Path;
 use std::ptr;
 
-#[derive(Debug)]
 #[repr(C, align(4))]
 pub struct Arc {
     signature: [u8; 12],
     count: u32,
 }
 
-#[derive(Debug)]
 #[repr(C, align(4))]
 pub struct Entry {
     pub name: [u8; 0x60],
@@ -40,7 +38,7 @@ fn size() {
     assert_eq!(size_of::<Entry>(), 0x80);
 }
 
-pub fn extract(content: &[u8], base: &Path) -> io::Result<()> {
+pub fn extract(content: &[u8], base: &Path) -> Result<()> {
     let count = unsafe {
         let ptr = content.as_ptr().add(12) as *const u32;
         *ptr as usize

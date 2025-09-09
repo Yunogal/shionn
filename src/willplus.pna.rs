@@ -1,6 +1,6 @@
-use std::io::Result;
+use std::fs::File;
+use std::io::{Result, Write};
 use std::ptr;
-use std::{fs::File, io::Write};
 
 #[repr(C)]
 pub struct PNA {

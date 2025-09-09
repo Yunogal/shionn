@@ -1,6 +1,6 @@
 use std::arch::asm;
 use std::fs::File;
-use std::io::{self, BufWriter, Write};
+use std::io::{BufWriter, Result, Write};
 use std::mem;
 use std::path::Path;
 use std::ptr;
@@ -9,7 +9,6 @@ use encoding_rs::SHIFT_JIS;
 
 const OFFSET: usize = 0x804;
 
-#[derive(Debug)]
 #[repr(C)]
 pub struct Pac {
     signature: u32,
@@ -17,7 +16,6 @@ pub struct Pac {
     count: u32,
 }
 
-#[derive(Debug)]
 #[repr(C)]
 pub struct Entry {
     pub name: [u8; 32],
@@ -69,7 +67,7 @@ pub fn decode(buffer: &mut [u8]) {
     }
 }
 
-pub fn parse_data_to_json<W: Write>(input: &[u8], mut out: W) -> io::Result<()> {
+pub fn parse_data_to_json<W: Write>(input: &[u8], mut out: W) -> Result<()> {
     let length: u32 = unsafe {
         let ptr = input.as_ptr().add(12) as *const u32;
         ptr.read_unaligned()
@@ -102,7 +100,7 @@ pub fn parse_data_to_json<W: Write>(input: &[u8], mut out: W) -> io::Result<()> 
     Ok(())
 }
 
-pub fn extract(content: &mut [u8], base: &Path) -> io::Result<()> {
+pub fn extract(content: &mut [u8], base: &Path) -> Result<()> {
     let ptr: *const Pac = content.as_ptr().cast();
     let pac = unsafe { &*ptr };
     let count = pac.count as usize;

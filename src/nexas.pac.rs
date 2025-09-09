@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{self, Write};
+use std::io::{Result, Write};
 use std::mem::{MaybeUninit, transmute};
 use std::path::Path;
 use std::ptr;
@@ -41,7 +41,7 @@ fn size() {
     assert_eq!(size_of::<Entry>(), 0x4C);
 }
 
-pub fn extract(content: &mut [u8], base: &Path) -> io::Result<()> {
+pub fn extract(content: &mut [u8], base: &Path) -> Result<()> {
     let ptr = content.as_ptr();
     let pac: *const Pac = ptr.cast();
     let &Pac { count, type_, .. } = unsafe { &*pac };
