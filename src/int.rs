@@ -1,20 +1,19 @@
-#![allow(dead_code)]
-#![allow(non_snake_case)]
-
-use core::mem::transmute;
 use std::ffi::c_void;
 use std::io;
-use std::mem::{self, MaybeUninit};
-use std::os::windows::ffi::OsStrExt;
-use std::path::Path;
-use std::ptr::{self};
+use std::mem::{MaybeUninit, swap, transmute};
+use std::ptr;
 
 use memmap2::Mmap;
 use windows_sys::Win32::System::LibraryLoader::{
     FindResourceW, LoadLibraryExW, LoadResource, LockResource, SizeofResource,
 };
+use windows_sys::w;
 
-use crate::ptr::ReadNum;
+#[repr(C)]
+pub struct Int {
+    pub signature: [u8; 4], // 'KIF\0'
+    pub count: u32,
+}
 
 pub struct Raw {
     name: [u8; 0x40],
@@ -72,20 +71,24 @@ impl Raw {
 }
 
 pub struct Entry {
-    name: Box<[u8]>,
-    address: u32,
-    size: u32,
+    pub name: Box<[u8]>,
+    pub address: u32,
+    pub size: u32,
 }
+
 impl Entry {
-    fn name(&self) -> &str {
+    pub fn name(&self) -> &str {
         unsafe { transmute(self.name.as_ref()) }
     }
 }
+
 #[test]
 fn size() {
-    use std::mem::*;
-    assert_eq!(size_of::<Raw>(), 0x48);
+    use std::mem::{align_of, size_of};
     assert_eq!(align_of::<Raw>(), 4);
+    assert_eq!(size_of::<Raw>(), 0x48);
+    assert_eq!(align_of::<Int>(), 4);
+    assert_eq!(align_of::<Int>(), 8);
 }
 
 fn get(lib: *mut c_void, name: *const u16, type_: *const u16) -> Box<[u8]> {
@@ -103,21 +106,9 @@ fn get(lib: *mut c_void, name: *const u16, type_: *const u16) -> Box<[u8]> {
         boxed.assume_init()
     }
 }
-fn get_key(base: &Path) -> u32 {
-    let exe: Box<[u16]> = base
-        .as_os_str()
-        .encode_wide()
-        .chain(Some(0))
-        .collect();
-    let lib = unsafe { LoadLibraryExW(exe.as_ptr(), ptr::null_mut(), 2) };
-    let data: *const u16 = [0x44, 0x41, 0x54, 0x41, 0x00].as_ptr(); //DATA
-    let v_xode2: *const u16 =
-        [0x56, 0x5f, 0x43, 0x4f, 0x44, 0x45, 0x32, 0x00].as_ptr(); //V_CODE2
-    let key: *const u16 = [0x4b, 0x45, 0x59, 0x00].as_ptr(); //KEY
-    let key_code: *const u16 =
-        [0x4b, 0x45, 0x59, 0x5f, 0x43, 0x4f, 0x44, 0x45, 0x00].as_ptr(); //KEY_CODE
-    let mut code = get(lib, data, v_xode2);
-    let mut key = get(lib, key, key_code);
+fn get_key(lib: *mut c_void) -> u32 {
+    let mut code = get(lib, w!("DATA"), w!("V_CODE2"));
+    let mut key = get(lib, w!("KEY"), w!("KEY_CODE"));
     for byte in key.iter_mut() {
         *byte ^= 0xCD;
     }
@@ -131,17 +122,19 @@ fn get_key(base: &Path) -> u32 {
     crc32(code)
 }
 
-pub fn extract(mmap: Mmap, base: &Path) -> io::Result<()> {
+pub fn extract(mmap: Mmap) -> io::Result<()> {
     let content = &mmap[..];
-    let count: u32 = content.read(4);
+    let count = unsafe { *content.as_ptr().cast::<u32>().add(1) };
     //if &content[8..20] == b"__key__.dat\0" {}
-    let key = get_key(base);
+    let lib = unsafe { LoadLibraryExW(w!(""), ptr::null_mut(), 2) };
+    let key = get_key(lib);
     let count = count as usize - 1;
     let end = count * 0x48 + 0x50;
     debug_assert_eq!(content[end..end + 11], *b"__key__.dat");
     let raw = ptr::addr_of!(content[0x50..end]) as *const Raw;
     let raw = unsafe { &*ptr::slice_from_raw_parts(raw, count) };
-    let seed = content.read(0x4c);
+    // let seed = content.read(0x4c);
+    let seed = 1;
     let mut twister = MersenneTwister::new(seed);
     let blowfish_key = twister.rand();
     let blowfish_key: &[u8] = &blowfish_key.to_le_bytes();
@@ -372,10 +365,10 @@ impl Blowfish {
             Xl ^= self.p[i];
             Xr ^= self.f(Xl);
 
-            mem::swap(&mut Xl, &mut Xr);
+            swap(&mut Xl, &mut Xr);
         }
 
-        mem::swap(&mut Xl, &mut Xr);
+        swap(&mut Xl, &mut Xr);
 
         Xr ^= self.p[N];
         Xl ^= self.p[N + 1];
@@ -417,10 +410,10 @@ impl Blowfish {
             Xl ^= self.p[i];
             Xr ^= self.f(Xl);
 
-            mem::swap(&mut Xl, &mut Xr);
+            swap(&mut Xl, &mut Xr);
         }
 
-        mem::swap(&mut Xl, &mut Xr);
+        swap(&mut Xl, &mut Xr);
 
         Xr ^= self.p[1];
         Xl ^= self.p[0];
