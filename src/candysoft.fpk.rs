@@ -1,4 +1,10 @@
+use std::fs::File;
+use std::io::{Result, Write};
 use std::mem::transmute;
+use std::path::Path;
+use std::ptr;
+
+use crate::shionn_readwrite::{ReadStream, WriteStream};
 
 #[repr(transparent)]
 pub struct FPK {
@@ -25,6 +31,12 @@ impl Entry {
     }
 }
 
+#[repr(C)]
+pub struct ZLC2 {
+    pub signature: [u8; 4], // 'ZLC2'
+    pub zsize: u32,
+}
+
 #[test]
 fn size() {
     use std::mem::{align_of, size_of};
@@ -32,18 +44,20 @@ fn size() {
     assert_eq!(size_of::<FPK>(), 4);
     assert_eq!(align_of::<Entry>(), 4);
     assert_eq!(size_of::<Entry>(), 36);
+    assert_eq!(align_of::<ZLC2>(), 4);
+    assert_eq!(size_of::<ZLC2>(), 8);
 }
 
-pub fn extract(content: &mut [u8]) -> &[u8] {
-    if content[..8] == *b"\x30\x26\xb2\x75\x8e\x66\xcf\x11" {
-        // Advanced Systems Format
-        // WMV
-        return content;
-    }
+pub fn extract(content: &mut [u8]) -> Result<()> {
+    // if content[..8] == *b"\x30\x26\xb2\x75\x8e\x66\xcf\x11" {
+    //     // Advanced Systems Format
+    //     // WMV
+    //     return Ok(());
+    // }
     let ptr = content.as_ptr();
     let mut count = unsafe { *ptr.cast::<u32>() };
+    if count < 0x80000000 {} //
     count &= 0x7fffffff;
-
     let len = content.len();
     let key = unsafe {
         ptr.add(len - 8)
@@ -57,5 +71,83 @@ pub fn extract(content: &mut [u8]) -> &[u8] {
     for (index, i) in meta.iter_mut().enumerate() {
         *i ^= key[index & 3];
     }
-    meta
+    let entry = unsafe {
+        &*ptr::slice_from_raw_parts(meta.as_ptr().cast::<Entry>(), count as usize)
+    };
+    let path = Path::new("a");
+
+    for i in entry {
+        let address = i.address as usize;
+        let size = i.size as usize;
+
+        let name = i.name();
+        let name = path.join(name);
+        let mut file = File::create(name)?;
+        if content[address..address + 4] == *b"ZLC2" {
+            let zsize = unsafe {
+                ptr::addr_of!(content[address + 4])
+                    .cast::<u32>()
+                    .read_unaligned()
+            } as usize;
+            let mut output = Box::<[u8]>::new_uninit_slice(zsize);
+            let slice = unsafe {
+                &mut *ptr::slice_from_raw_parts_mut(
+                    output.as_mut_ptr() as *mut u8,
+                    zsize,
+                )
+            };
+            let data = &content[address + 8..address + size];
+            unpack(data, slice);
+            let output = unsafe { output.assume_init() };
+            file.write_all(&output)?;
+        } else {
+            file.write_all(&content[address..address + size])?;
+        }
+    }
+
+    Ok(())
+}
+fn unpack(input: &[u8], output: &mut [u8]) {
+    let len = input.len();
+    let len2 = output.len();
+    let mut read = ReadStream::new(input);
+    let mut write = WriteStream::new(output);
+
+    while read.pos < len && write.pos < len2 {
+        let control: u8 = read.read_aligned();
+        let mut mask = 0x80u8;
+        loop {
+            if mask == 0 || read.pos >= len || write.pos >= len2 {
+                break;
+            }
+            if control & mask != 0 {
+                let offset: u8 = read.read_aligned();
+                let count: u8 = read.read_aligned();
+                let mut offset =
+                    (offset as usize) | (((count as usize) & 0xF0) << 4);
+                let mut count = ((count as usize) & 0x0F) + 3;
+                if offset == 0 {
+                    offset = 4096;
+                }
+                if write.pos + count >= len2 {
+                    count = len2 - write.pos;
+                }
+                write.copy_from_self(offset, count);
+            } else {
+                write.copy_from(1, &mut read);
+            };
+            mask >>= 1;
+        }
+    }
+}
+
+#[test]
+#[ignore]
+fn main() -> Result<()> {
+    use memmap2::MmapOptions;
+    use std::fs::File;
+    let file = File::open(r".fpk")?;
+    let mut mmap = unsafe { MmapOptions::new().map_copy(&file)? };
+    extract(&mut mmap[..])?;
+    Ok(())
 }
