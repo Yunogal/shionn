@@ -68,5 +68,7 @@ pub mod yuris_ypf;
 
 #[path = "shionn.lzss.rs"]
 pub mod shionn_lzss;
+#[path = "shionn.readwrite.rs"]
+pub mod shionn_readwrite;
 #[path = "shionn.stream.rs"]
 pub mod shionn_stream;
