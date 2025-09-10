@@ -1,7 +1,6 @@
 use std::fs::File;
 use std::io::{Result, Write};
 use std::mem::transmute;
-use std::path::Path;
 use std::ptr;
 
 use crate::shionn_readwrite::{ReadStream, WriteStream};
@@ -74,14 +73,12 @@ pub fn extract(content: &mut [u8]) -> Result<()> {
     let entry = unsafe {
         &*ptr::slice_from_raw_parts(meta.as_ptr().cast::<Entry>(), count as usize)
     };
-    let path = Path::new("a");
 
     for i in entry {
         let address = i.address as usize;
         let size = i.size as usize;
 
         let name = i.name();
-        let name = path.join(name);
         let mut file = File::create(name)?;
         if content[address..address + 4] == *b"ZLC2" {
             let zsize = unsafe {
@@ -146,7 +143,7 @@ fn unpack(input: &[u8], output: &mut [u8]) {
 fn main() -> Result<()> {
     use memmap2::MmapOptions;
     use std::fs::File;
-    let file = File::open(r".fpk")?;
+    let file = File::open(r"F:\GALGAME\CandySoft\LoveCommu\data.fpk")?;
     let mut mmap = unsafe { MmapOptions::new().map_copy(&file)? };
     extract(&mut mmap[..])?;
     Ok(())

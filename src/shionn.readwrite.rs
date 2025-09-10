@@ -17,23 +17,22 @@ impl<'a> WriteStream<'a> {
         unsafe { ptr::copy_nonoverlapping(srcs, ptr, count) };
     }
     pub fn copy_from_self(&mut self, offset: usize, mut remaining: usize) {
-        let mut start = self.pos - offset;
-
+        let start = self.pos - offset;
+        let mut src = ptr::addr_of!(self.buf[start]);
+        let mut dst = ptr::addr_of_mut!(self.buf[self.pos]);
         loop {
-            let src = ptr::addr_of!(self.buf[start]);
-            let dst = ptr::addr_of_mut!(self.buf[self.pos]);
             let chunk = offset.min(remaining);
             unsafe {
                 ptr::copy_nonoverlapping(src, dst, chunk);
+                src = src.add(chunk);
+                dst = dst.add(chunk);
             }
-            start += chunk;
             self.pos += chunk;
             remaining -= chunk;
             if remaining == 0 {
                 break;
             }
         }
-
         // while remaining > 0 {
         //     let chunk = offset.min(remaining);
         //     self.buf
