@@ -1,0 +1,26 @@
+@ua=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36
+#title titles{latin,title}
+//
+
+POST https://api.vndb.org/kana/vn
+Content-Type: application/json
+User-Agent: {{ua}}
+
+{
+    "filters": ["developer", "=", ["id","=","p371"]],
+    "fields": "id,title,alttitle,released",
+    "sort":"released",
+    "results":100
+}
+
+###
+
+POST https://api.vndb.org/kana/producer
+Content-Type: application/json
+User-Agent: {{ua}}
+
+{
+    "filters": ["id", "=", "p371"],
+    "fields": "id,name,aliases,extlinks{url,label}",
+    "results":1
+}
