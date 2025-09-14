@@ -3,6 +3,7 @@ use std::io::{Result, Write};
 use std::mem::transmute;
 use std::ptr;
 
+#[repr(C)]
 pub struct Dat {
     pub size: u32,
     pub size_: u32,
@@ -15,6 +16,14 @@ pub struct Entry {
     pub size: u32,
 }
 
+#[test]
+fn size() {
+    use std::mem::{align_of, size_of};
+    assert_eq!(align_of::<Dat>(), 4);
+    assert_eq!(size_of::<Dat>(), 8);
+    assert_eq!(align_of::<Entry>(), 4);
+    assert_eq!(size_of::<Entry>(), 0x10C);
+}
 use std::os::raw::c_char;
 unsafe extern "C" {
     fn strlen(s: *const c_char) -> usize;

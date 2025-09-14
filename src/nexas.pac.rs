@@ -6,8 +6,7 @@ use std::ptr;
 
 #[repr(C)]
 pub struct Pac {
-    pub signature: [u8; 3], // 'PAC'
-    pub ubk: u8,
+    pub signature: [u8; 4], // 'PAC\0'
     pub count: u32,
     pub type_: u32,
 }
@@ -44,7 +43,10 @@ fn size() {
 pub fn extract(content: &mut [u8], base: &Path) -> Result<()> {
     let ptr = content.as_ptr();
     let pac: *const Pac = ptr.cast();
-    let &Pac { count, type_, .. } = unsafe { &*pac };
+    let Pac { count, type_, .. } = unsafe { pac.read() };
+    match type_ {
+        | _ => {},
+    }
     let end = content.len() - 4;
     let length = unsafe { ptr.add(end).cast::<u32>().read_unaligned() } as usize;
     let header = &mut content[end - length..end];
