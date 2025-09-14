@@ -37,13 +37,16 @@
   </tr>
   <tr>
     <td>Azarashi Soft
-    <br>Clock Up
+    <br>Casket
+    <br>Chelsea Soft
+    <br>CLOCKUP
     <br>Vanadis
     <br>Whirlpool
     </td>
     <td>*.ypf</td>
     <td>YPF\0</td>
     <td>YU-RIS</td>
+
   </tr>
   <tr>
     <td>GIGA
@@ -73,13 +76,17 @@
   </tr>
   <tr>
     <td>Clochette
+    <br>Windmill
     </td>
     <td>*.int</td>
     <td>KIF\0</td>
     <td>CatSystem2</td>
   </tr>
     <tr>
-    <td>ASa Project
+    <td>ALcot
+    <br>ALcot Honey Comb
+    <br>ASa Project
+    <br>Hulotte
     </td>
     <td>*.xp3</td>
     <td>XP3</td>
