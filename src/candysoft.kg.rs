@@ -1,3 +1,4 @@
+use std::io::Result;
 use std::ptr;
 
 use crate::bmp;
@@ -15,7 +16,7 @@ fn size() {
     assert_eq!(align_of::<KG>(), 4);
     assert_eq!(size_of::<KG>(), 12);
 }
-pub fn extract(content: &mut [u8]) {
+pub fn extract(content: &mut [u8]) -> Result<()> {
     let ptr: *const KG = content.as_ptr().cast();
     let &KG { width, height, .. } = unsafe { &*ptr };
     let height = height as usize;
@@ -63,6 +64,17 @@ pub fn extract(content: &mut [u8]) {
         height as u32,
         "name.bmp",
         buf.as_ref(),
-    )
-    .unwrap();
+    )?;
+    Ok(())
+}
+
+#[test]
+#[ignore]
+fn main() -> Result<()> {
+    use memmap2::MmapOptions;
+    use std::fs::File;
+    let file = File::open(r".kg")?;
+    let mut mmap = unsafe { MmapOptions::new().map_copy(&file)? };
+    extract(&mut mmap[..])?;
+    Ok(())
 }
