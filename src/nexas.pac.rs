@@ -6,7 +6,8 @@ use std::ptr;
 
 #[repr(C)]
 pub struct Pac {
-    pub signature: [u8; 4], // 'PAC\0'
+    pub signature: [u8; 3], // 'PAC'
+    pub unknown: u8,
     pub count: u32,
     pub type_: u32,
 }
