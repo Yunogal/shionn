@@ -2,9 +2,9 @@
 [package]
 name = "shionn"
 version = "0.4.4"
-authors=["Yuno","tsubakii"]
+authors=["Yuno","tsubakii","shionn"]
 edition = "2024"
-# rust-version=1.89
+# rust-version=1.90
 description="A tool to see something"
 documentation="docs/"
 readme="README.md"
@@ -38,10 +38,12 @@ encoding_rs = "0.8.35"
 flate2 = { version = "1.1.2", default-features = false, features = ["zlib"] }
 memmap2 = "0.9.7"
 
-[dependencies.windows-sys]
+# https://kennykerr.ca/index.html
+# https://docs.rs/windows-sys/latest/windows_sys/
+[dependencies.windows-sys] 
 version = "0.60.2"
 features = [
-    "Win32_System_LibraryLoader"
+    "Win32_System_LibraryLoader" 
 ]
 
 [profile.dev]
@@ -55,6 +57,7 @@ codegen-units = 1
 panic = "abort"
 
 [dev-dependencies]
+chrono = "0.4.42"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.143"
 ureq = "3.1.2"

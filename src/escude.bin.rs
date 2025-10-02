@@ -59,7 +59,7 @@ pub fn extract(content: &mut [u8]) -> Result<()> {
         ..
     } = unsafe { &*ptr };
     count ^= seed.update();
-    let name_size = (name_size ^ seed.update()) as usize;
+    let _name_size = (name_size ^ seed.update()) as usize;
     let ptr = unsafe { ptr.add(1) }.cast::<u32>();
     let count = count as usize;
     let index_size = 3 * count;

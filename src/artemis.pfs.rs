@@ -21,6 +21,12 @@ pub struct PF {
 //     pub size: u32,
 // }
 
+// pub struct SizeOff {
+//     pub count: u32,
+//     pub offsets: [u64; count], + 0x0F
+//     pub offset: u32,           + 0x07
+// }
+
 #[test]
 fn size() {
     use std::mem::{align_of, size_of};
