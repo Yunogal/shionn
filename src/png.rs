@@ -6,12 +6,14 @@ pub struct PNG {
 }
 
 // https://www.w3.org/TR/png-3/#5Chunk-layout
+//
 // struct Chuck {
 //     length: u32, // The length counts only the data field, not itself, the chunk type, or the CRC.
 //     type_: u32,
 //     data: [u8; length],
 //     crc: u32,  // including the chunk type field and chunk data fields, but not including the length field
 // }
+//
 // https://www.w3.org/TR/png-3/#5ChunkOrdering
 
 // https://www.w3.org/TR/png-3/#11IHDR
@@ -51,7 +53,68 @@ impl IHDR {
         self.crc = crc32(slice).swap_bytes();
     }
 }
+// https://www.w3.org/TR/png-3/#11iCCP
+pub struct ICCP {
+    pub length: u32,
+    pub type_: [u8; 4], // 'iCCP'
+    pub data: [u8; 0],
+    pub crc: u32,
+}
+// https://www.w3.org/TR/png-3/#11PLTE
+#[repr(C)]
+pub struct PLTE {
+    pub length: u32,
+    pub type_: [u8; 4], // 'PLTE'
+    pub data: [u8; 0],
+    pub crc: u32,
+}
 
+// https://www.w3.org/TR/png-3/#11cHRM
+pub struct CHRM {
+    pub length: u32,
+    pub type_: [u8; 4], // 'cHRM'
+    pub data: [u8; 32],
+    pub crc: u32,
+}
+
+// https://www.w3.org/TR/png-3/#11pHYs
+// The pHYs chunk specifies the intended pixel size or aspect ratio for display of the image.
+pub struct PHYS {
+    pub length: u32,
+    pub type_: [u8; 4], // 'pHYs'
+    //pub data: [u8; 9],
+    // Pixels per unit, X axis
+    // Pixels per unit, Y axis
+    // Unit specifier
+    pub crc: u32,
+}
+// https://www.w3.org/TR/png-3/#acTL-chunk
+// The acTL chunk declares that this is an animated PNG image, gives the number of frames, and the number of times to loop.
+pub struct ACTL {
+    pub length: u32,    // 8
+    pub type_: [u8; 4], // 'acTL'
+    pub num_frames: u32,
+    pub num_plays: u32,
+    pub crc: u32,
+}
+
+// https://www.w3.org/TR/png-3/#fcTL-chunk
+// The fcTL chunk defines the dimensions, position, delay and disposal of an individual frame. Exactly one fcTL chunk chunk is required for each frame.
+pub struct FCTL {
+    pub length: u32,    // 8
+    pub type_: [u8; 4], // 'fcTL'
+    pub sequence_number: u32,
+    pub width: u32,
+    pub height: u32,
+    pub x_offset: u32,
+    pub y_offset: u32,
+    pub delay_num: u16,
+    pub delay_den: u16,
+    pub dispose_op: u8,
+    pub blend_op: u8,
+    pub crc: u32,
+}
+// https://www.w3.org/TR/png-3/#11IEND
 #[repr(C)]
 pub struct IEND {
     pub length: u32,    // '\0\0\0\0'
@@ -68,6 +131,14 @@ fn iend() {
 }
 
 // 1 m ≈ 39.3701 inch
+
+#[repr(C)]
+pub struct YUNO {
+    pub length: u32,    // '\0\0\0\x18'
+    pub type_: [u8; 4], // 'yuNO'
+    pub data: [u8; 24], // '我妻由乃 | YunoGasai'
+    pub crc: u32,       //
+}
 
 #[test]
 fn size() {

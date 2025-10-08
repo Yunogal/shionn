@@ -1,5 +1,10 @@
+# https://rust-lang.github.io/mdBook
 [book]
 authors = ["yunogasai"]
 language = "en"
 src = "docs"
 title = "Shionn"
+description = "The example book covers examples."
+
+[rust]
+edition = "2024"

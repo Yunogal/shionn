@@ -1,14 +1,26 @@
-#![allow(unnecessary_transmutes)]
-#![allow(unused_must_use)]
-#![allow(dead_code)]
-#![allow(clippy::write_with_newline)]
-#![allow(clippy::manual_rotate)]
-#![allow(clippy::needless_range_loop)]
-#![allow(non_snake_case)]
-
-use std::fs;
-use std::fs::OpenOptions;
+/// https://www.rust-lang.org
+/// https://crates.io
+/// https://docs.rs
+/// https://rust-lang.github.io/api-guidelines/about.html
+/// https://rust-lang.github.io/rustup/overrides.html#the-toolchain-file
+/// https://rust-lang.github.io/rustup/environment-variables.html
+/// https://rustc-dev-guide.rust-lang.org
+///
+///
+/// https://cheats.rs
+/// https://lib.rs
+/// https://github.com/pretzelhammer/rust-blog
+/// https://releases.rs
+/// https://github.com/johnthagen/min-sized-rust
+/// https://marabos.nl/atomics
+/// https://github.com/dtolnay/rust-quiz
+/// https://github.com/kaist-cp/cs431
+///
+///
+use std::fs::{self, OpenOptions};
+use std::io;
 use std::path::PathBuf;
+use std::process;
 
 use clap::{CommandFactory, Parser};
 use memmap2::MmapOptions;
@@ -21,7 +33,6 @@ mod artemis_pfs;
 pub mod bgi_arc;
 #[path = "bgi.dsc.rs"]
 mod bgi_dsc;
-mod exe;
 mod kirikiri;
 #[path = "kirikiri.xp3.rs"]
 pub mod kirikiri_xp3;
@@ -52,26 +63,26 @@ struct Shionn {
     extra: Option<PathBuf>,
 }
 
-fn main() -> std::io::Result<()> {
+fn main() -> io::Result<()> {
     let shionn = Shionn::parse();
     if let Some(path) = shionn.input.or(shionn.file).as_deref() {
         let file = OpenOptions::new().read(true).open(path)?;
         let mut mmap = unsafe { MmapOptions::new().map_copy(&file)? };
         let base = &shionn.output.unwrap_or(PathBuf::from(".shionn"));
-        fs::create_dir_all(base);
+        fs::create_dir_all(base)?;
         let content = &mut mmap[..];
         match content {
             | [b'P', b'A', b'C', b'\x20', ..] => {
                 //PAC\x20
-                amuse_pac::extract(content, base);
+                amuse_pac::extract(content, base)?;
             },
             | [b'P', b'A', b'C', ..] => {
                 //PAC
-                nexas_pac::extract(content, base);
+                nexas_pac::extract(content, base)?;
             },
             | [b'p', b'f', ..] => {
                 //pf8 //pf6
-                artemis_pfs::extract(content, base);
+                artemis_pfs::extract(content, base)?;
             },
             | [b'Y', b'P', b'F', b'\0', ..] => {
                 //YPF\0
@@ -118,6 +129,6 @@ fn main() -> std::io::Result<()> {
         Ok(())
     } else {
         Shionn::command().print_help().unwrap();
-        std::process::exit(0);
+        process::exit(0);
     }
 }

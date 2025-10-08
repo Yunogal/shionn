@@ -1,9 +1,14 @@
-// https://datatracker.ietf.org/doc/html/rfc3533#section-6
-
-// https://datatracker.ietf.org/doc/html/rfc3534
-
-// https://xiph.org/ogg/doc/framing.html
-
+/// https://datatracker.ietf.org/doc/html/rfc3534
+/// Obsoleted by RFC 5334
+///
+///
+///
+/// https://datatracker.ietf.org/doc/html/rfc5334
+///
+///
+///
+/// https://datatracker.ietf.org/doc/html/rfc3533#section-6
+/// https://xiph.org/ogg/doc/framing.html
 #[repr(C, packed)]
 pub struct Ogg {
     pub signature: u32, //'OggS'

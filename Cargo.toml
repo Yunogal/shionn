@@ -33,9 +33,17 @@ name="shionn"
 path="src/main.rs"
 
 [dependencies]
+
+# Command Line Argument Parser
 clap = { version = "4.5.41", features = ["derive"] }
+
+#  Encoding
 encoding_rs = "0.8.35"
+
+# compression | decompression
 flate2 = { version = "1.1.2", default-features = false, features = ["zlib"] }
+
+# memory map 
 memmap2 = "0.9.7"
 
 # https://kennykerr.ca/index.html
