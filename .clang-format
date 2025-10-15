@@ -1,3 +1,4 @@
 # https://clang.llvm.org/docs/ClangFormatStyleOptions.html#
+# clang-tidy .cpp -- -I /path/to/include
 # clang-format -i .c
 BasedOnStyle: LLVM

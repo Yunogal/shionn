@@ -95,6 +95,25 @@ https://github.com/libjpeg-turbo/libjpeg-turbo
 
 ---
 
+https://developers.google.com/speed/webp
+
+https://chromium.googlesource.com/webm/libwebp
+
+`webpinfo -diag -summary -bitstream_info .webp`
+
+### compile
+
+`nmake /f Makefile.vc CFG=release-static RTLIBCFG=static OBJDIR=output ARCH=x64`
+
+```sh
+mkdir build
+cd build
+cmake -G "NMake Makefiles" -DWEBP_BUILD_EXTRAS=ON -DWEBP_BUILD_WEBPINFO=ON ..
+nmake
+```
+
+---
+
 https://ezgif.com
 
 https://www.gzip.org

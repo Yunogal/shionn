@@ -7,4 +7,4 @@ title = "Shionn"
 description = "The example book covers examples."
 
 [rust]
-edition = "2024"
+edition = "2021"
