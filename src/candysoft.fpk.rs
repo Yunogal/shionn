@@ -143,7 +143,7 @@ fn unpack(input: &[u8], output: &mut [u8]) {
 fn main() -> Result<()> {
     use memmap2::MmapOptions;
     use std::fs::File;
-    let file = File::open(r"F:\GALGAME\CandySoft\LoveCommu\data.fpk")?;
+    let file = File::open(r".fpk")?;
     let mut mmap = unsafe { MmapOptions::new().map_copy(&file)? };
     extract(&mut mmap[..])?;
     Ok(())
