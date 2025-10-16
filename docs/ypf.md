@@ -1,3 +1,5 @@
+https://www.ymgal.games/co/article/136208542150426624
+
 将游戏拖到 IDA,点击`Alt+T`,搜索`YPF`
 
 ![](ypf/010.png)
